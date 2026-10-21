@@ -1,0 +1,33 @@
+Dimensional Anchors Mod License
+Copyright (c) 2026 Murilo Elias
+
+This license applies only to original Dimensional Anchors project materials
+authored by Murilo Elias, including the mod source code and project
+documentation. It does not replace or modify licenses for Minecraft, NeoForge,
+the NeoForge MDK template, dependencies, or other third-party materials.
+
+Permission is granted to use and modify these materials for personal,
+non-commercial purposes.
+
+Public redistribution, publication, mirroring, or re-upload of the original or
+modified materials, in source or binary form, is permitted only if all of the
+following conditions are met:
+
+1. This license and the copyright notice are included with every distribution.
+2. Murilo Elias is clearly credited as the original author, and the canonical
+   repository is linked: https://github.com/iloElias/dimensional-anchors
+3. Modified versions clearly identify their changes and are not represented as
+   official builds or as the original project.
+4. Contributions included in the redistributed version follow the project's
+   contribution and review standards in CONTRIBUTING.md. Open design decisions
+   in docs/DESIGN.md must not be presented as approved without the author's
+   explicit approval.
+
+No ownership of the original work is transferred by this license. No other
+rights are granted, expressly or by implication. All rights not expressly
+granted are reserved by the copyright holder.
+
+THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER
+IS NOT LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE
+MATERIALS OR THEIR USE.

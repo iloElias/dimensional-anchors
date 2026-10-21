@@ -1,0 +1,13 @@
+{
+  "itemGroup.dimensionalanchors": "Example Mod Tab",
+  "block.dimensionalanchors.example_block": "Example Block",
+  "item.dimensionalanchors.example_item": "Example Item",
+
+  "dimensionalanchors.configuration.title": "Dimensional Anchors Configs",
+  "dimensionalanchors.configuration.section.dimensionalanchors.common.toml": "Dimensional Anchors Configs",
+  "dimensionalanchors.configuration.section.dimensionalanchors.common.toml.title": "Dimensional Anchors Configs",
+  "dimensionalanchors.configuration.items": "Item List",
+  "dimensionalanchors.configuration.logDirtBlock": "Log Dirt Block",
+  "dimensionalanchors.configuration.magicNumberIntroduction": "Magic Number Text",
+  "dimensionalanchors.configuration.magicNumber": "Magic Number"
+}
