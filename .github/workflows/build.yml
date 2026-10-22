@@ -78,7 +78,7 @@ jobs:
                   key, value = line.split("=", 1)
                   properties[key.strip()] = value.strip()
 
-          run_url = (          dimensionalanchors-0.1.0-alpha.3.jar
+          run_url = (
               f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
               f"/actions/runs/{os.environ['GITHUB_RUN_ID']}"
           )
