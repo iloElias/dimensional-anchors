@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -97,13 +99,19 @@ public class DimensionalAnchors {
 
     private static DeferredBlock<Block> registerAnchor(String name, Block soundReference) {
         return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
+                .setId(blockKey(name))
                 .mapColor(MapColor.METAL)
                 .sound(soundReference.defaultBlockState().getSoundType())));
     }
 
     private static DeferredBlock<Block> registerUtilityBlock(String name) {
         return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
+                .setId(blockKey(name))
                 .mapColor(MapColor.STONE)
                 .sound(Blocks.STONE.defaultBlockState().getSoundType())));
+    }
+
+    private static ResourceKey<Block> blockKey(String name) {
+        return ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MODID, name));
     }
 }
