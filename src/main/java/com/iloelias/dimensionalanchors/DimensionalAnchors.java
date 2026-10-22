@@ -33,15 +33,15 @@ public class DimensionalAnchors {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
     public static final DeferredBlock<Block> COPPER_DIMENSIONAL_ANCHOR =
-            registerAnchor("copper_dimensional_anchor", Blocks.COPPER_ORE);
+            registerAnchor("copper_dimensional_anchor", Blocks.COPPER_BLOCK);
     public static final DeferredBlock<Block> IRON_DIMENSIONAL_ANCHOR =
-            registerAnchor("iron_dimensional_anchor", Blocks.IRON_ORE);
+            registerAnchor("iron_dimensional_anchor", Blocks.IRON_BLOCK);
     public static final DeferredBlock<Block> GOLD_DIMENSIONAL_ANCHOR =
-            registerAnchor("gold_dimensional_anchor", Blocks.GOLD_ORE);
+            registerAnchor("gold_dimensional_anchor", Blocks.GOLD_BLOCK);
     public static final DeferredBlock<Block> DIAMOND_DIMENSIONAL_ANCHOR =
-            registerAnchor("diamond_dimensional_anchor", Blocks.DIAMOND_ORE);
+            registerAnchor("diamond_dimensional_anchor", Blocks.DIAMOND_BLOCK);
     public static final DeferredBlock<Block> NETHERITE_DIMENSIONAL_ANCHOR =
-            registerAnchor("netherite_dimensional_anchor", Blocks.ANCIENT_DEBRIS);
+            registerAnchor("netherite_dimensional_anchor", Blocks.NETHERITE_BLOCK);
 
     public static final DeferredBlock<Block> DIMENSIONAL_LIMITER_BLOCK =
             registerUtilityBlock("dimensional_limiter_block");

@@ -33,18 +33,33 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew --no-daemon build
 
+      - name: Read artifact coordinates
+        id: coordinates
+        shell: bash
+        run: |
+          mod_id="$(awk -F= '$1 == "mod_id" {print $2}' gradle.properties)"
+          mod_version="$(awk -F= '$1 == "mod_version" {print $2}' gradle.properties)"
+          if [[ -z "$mod_id" || -z "$mod_version" ]]; then
+            echo 'Could not determine mod artifact coordinates.' >&2
+            exit 1
+          fi
+          {
+            echo "mod_id=$mod_id"
+            echo "mod_version=$mod_version"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Collect release files
         id: artifacts
         shell: bash
         run: |
-          mapfile -t files < <(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | sort)
-          if [[ ${#files[@]} -eq 0 ]]; then
-            echo 'No release artifacts were built.' >&2
+          expected="build/libs/${{ steps.coordinates.outputs.mod_id }}-${{ steps.coordinates.outputs.mod_version }}.jar"
+          if [[ ! -f "$expected" ]]; then
+            echo "Expected release artifact was not built: $expected" >&2
             exit 1
           fi
           {
             echo 'files<<EOF'
-            printf '%s\n' "${files[@]}"
+            printf '%s\n' "$expected"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 

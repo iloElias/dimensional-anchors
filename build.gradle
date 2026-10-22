@@ -34,6 +34,11 @@ base {
     archivesName = mod_id
 }
 
+tasks.withType(Jar).configureEach {
+    archiveBaseName = mod_id
+    archiveVersion = mod_version
+}
+
 // Mojang ships Java 25 to end users in 26.1.2, so mods should target Java 25.
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
