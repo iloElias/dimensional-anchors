@@ -33,15 +33,15 @@ public class DimensionalAnchors {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
     public static final DeferredBlock<Block> COPPER_DIMENSIONAL_ANCHOR =
-            registerAnchor("copper_dimensional_anchor", Blocks.COPPER_BLOCK);
+            registerAnchor("copper_dimensional_anchor", Blocks.COPPER_BLOCK, Blocks.COPPER_ORE);
     public static final DeferredBlock<Block> IRON_DIMENSIONAL_ANCHOR =
-            registerAnchor("iron_dimensional_anchor", Blocks.IRON_BLOCK);
+            registerAnchor("iron_dimensional_anchor", Blocks.IRON_BLOCK, Blocks.IRON_ORE);
     public static final DeferredBlock<Block> GOLD_DIMENSIONAL_ANCHOR =
-            registerAnchor("gold_dimensional_anchor", Blocks.GOLD_BLOCK);
+            registerAnchor("gold_dimensional_anchor", Blocks.GOLD_BLOCK, Blocks.GOLD_ORE);
     public static final DeferredBlock<Block> DIAMOND_DIMENSIONAL_ANCHOR =
-            registerAnchor("diamond_dimensional_anchor", Blocks.DIAMOND_BLOCK);
+            registerAnchor("diamond_dimensional_anchor", Blocks.DIAMOND_BLOCK, Blocks.DIAMOND_ORE);
     public static final DeferredBlock<Block> NETHERITE_DIMENSIONAL_ANCHOR =
-            registerAnchor("netherite_dimensional_anchor", Blocks.NETHERITE_BLOCK);
+            registerAnchor("netherite_dimensional_anchor", Blocks.NETHERITE_BLOCK, Blocks.ANCIENT_DEBRIS);
 
     public static final DeferredBlock<Block> DIMENSIONAL_LIMITER_BLOCK =
             registerUtilityBlock("dimensional_limiter_block");
@@ -97,10 +97,13 @@ public class DimensionalAnchors {
         CREATIVE_MODE_TABS.register(modEventBus);
     }
 
-    private static DeferredBlock<Block> registerAnchor(String name, Block soundReference) {
+    private static DeferredBlock<Block> registerAnchor(
+            String name, Block soundReference, Block explosionResistanceReference) {
         return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
                 .setId(blockKey(name))
                 .mapColor(MapColor.METAL)
+                .strength(soundReference.defaultDestroyTime(), explosionResistanceReference.getExplosionResistance())
+                .requiresCorrectToolForDrops()
                 .sound(soundReference.defaultBlockState().getSoundType())));
     }
 
@@ -108,6 +111,7 @@ public class DimensionalAnchors {
         return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
                 .setId(blockKey(name))
                 .mapColor(MapColor.STONE)
+                .strength(Blocks.BEDROCK.defaultDestroyTime(), Blocks.BEDROCK.getExplosionResistance())
                 .sound(Blocks.STONE.defaultBlockState().getSoundType())));
     }
 

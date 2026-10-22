@@ -33,6 +33,10 @@ planned room mechanics are implemented.
 - Configured anchor sounds using the corresponding vanilla material block's
   sound type: Copper, Iron, Gold, Diamond, and Netherite block sounds. No
   custom audio files or sound events are introduced.
+- Configured anchors with material block hardness and approved ore-equivalent
+  blast resistance, requiring an iron-tier or better pickaxe to mine.
+- Configured boundary and exit blocks with bedrock hardness and blast
+  resistance so they cannot be broken in survival.
 - Internal preview blocks currently use Stone sounds.
 
 The two key items and creative access to internal blocks are preview conveniences,
@@ -61,9 +65,9 @@ not a final implementation of key states or survival availability.
 - The release title uses the tag name. Its description combines generated
   compatibility/installation information with GitHub's automatic release notes;
   manual title or description entry is not required.
-- Documented that the release tag must match `mod_version` with a leading `v`.
-  This correspondence is currently a publishing convention, not a workflow
-  validation gate.
+- Configured the release workflow to derive the Gradle and release-note version
+  from the pushed tag, removing dependence on the static `mod_version` value in
+  `gradle.properties`.
 - Documented the rule against local compilation in
   [CONTRIBUTING](../CONTRIBUTING.md) and the [README](../README.md).
 

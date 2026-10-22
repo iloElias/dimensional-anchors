@@ -30,23 +30,23 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew --no-daemon build
-
       - name: Read artifact coordinates
         id: coordinates
         shell: bash
         run: |
           mod_id="$(awk -F= '$1 == "mod_id" {print $2}' gradle.properties)"
-          mod_version="$(awk -F= '$1 == "mod_version" {print $2}' gradle.properties)"
+          mod_version="${GITHUB_REF_NAME#v}"
           if [[ -z "$mod_id" || -z "$mod_version" ]]; then
-            echo 'Could not determine mod artifact coordinates.' >&2
+            echo 'Could not determine mod artifact coordinates from the release tag.' >&2
             exit 1
           fi
           {
             echo "mod_id=$mod_id"
             echo "mod_version=$mod_version"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Build with Gradle
+        run: ./gradlew --no-daemon -Pmod_version="${{ steps.coordinates.outputs.mod_version }}" build
 
       - name: Collect release files
         id: artifacts
@@ -66,6 +66,7 @@ jobs:
       - name: Prepare release information
         env:
           RELEASE_TAG: ${{ github.ref_name }}
+          MOD_VERSION: ${{ steps.coordinates.outputs.mod_version }}
         shell: python
         run: |
           import os
@@ -77,13 +78,13 @@ jobs:
                   key, value = line.split("=", 1)
                   properties[key.strip()] = value.strip()
 
-          run_url = (
+          run_url = (          dimensionalanchors-0.1.0-alpha.3.jar
               f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
               f"/actions/runs/{os.environ['GITHUB_RUN_ID']}"
           )
           body = (
               f"## {properties['mod_name']} — {os.environ['RELEASE_TAG']}\n\n"
-              f"- Mod version: `{properties['mod_version']}`\n"
+              f"- Mod version: `{os.environ['MOD_VERSION']}`\n"
               f"- Minecraft: `{properties['minecraft_version']}`\n"
               f"- NeoForge: `{properties['neo_version']}`\n"
               "- Java: `25`\n\n"
