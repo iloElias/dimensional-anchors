@@ -54,6 +54,8 @@ visual prototype can be considered ready.
 - Configured Java 25 builds on GitHub Actions.
 - Configured release publication with installable JAR attachments, compatibility
   information, installation instructions, build provenance, and generated notes.
+- Set the initial prototype version to `0.1.0-alpha.1`. Tags containing a hyphen
+  are published as GitHub pre-releases; titles and descriptions are automatic.
 - Documented the rule against local compilation in
   [CONTRIBUTING](../CONTRIBUTING.md) and the [README](../README.md).
 

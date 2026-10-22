@@ -24,17 +24,23 @@ Use [Implementation Kickoff](docs/IMPLEMENTATION.md) to begin the technical asse
 ## Build
 
 Builds run on GitHub Actions, not locally. Push a release tag starting with `v`
-(for example, `v1.0.0`) to trigger the release workflow:
+(for example, `v0.1.0-alpha.1`) to trigger the release workflow:
 
 ```sh
-git tag v1.0.0
-git push origin v1.0.0
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
 ```
 
 The workflow builds with Java 25, attaches the installable JAR to a GitHub Release,
 and includes compatibility information, build provenance, and automatically generated
 release notes. Regular branch pushes and pull requests do not trigger this workflow.
 The mod version comes from `gradle.properties`; update it before tagging a new version.
+The tag must match that version with a leading `v`. Tags containing a hyphen
+(such as `v0.1.0-alpha.1`, `v0.1.0-beta.1`, or `v0.1.0-rc.1`) are marked as
+GitHub pre-releases; tags without a hyphen are regular releases.
+Gradle names the JAR using the mod ID and version, for example
+`dimensionalanchors-0.1.0-alpha.1.jar`. The release title is the tag, and its
+description is generated automatically; neither needs to be entered manually.
 Download published builds from the repository's Releases page.
 
 ## Contributing

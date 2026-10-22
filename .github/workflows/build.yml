@@ -89,6 +89,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           body_path: ${{ steps.release_info.outputs.body_path }}
           generate_release_notes: true
           fail_on_unmatched_files: true
