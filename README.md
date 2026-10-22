@@ -5,6 +5,8 @@ Dimensional Anchors is a NeoForge mod project for Minecraft 26.1.2. Its design d
 
 **Project status:** In development. The design specification is authoritative; planned features are not necessarily implemented or available in a release.
 
+See the [progress report](docs/PROGRESS.md) for implemented source changes, validation evidence, and remaining work.
+
 ## Compatibility
 
 - Minecraft: `26.1.2`
@@ -21,13 +23,19 @@ Use [Implementation Kickoff](docs/IMPLEMENTATION.md) to begin the technical asse
 
 ## Build
 
-Install a Java 25 JDK, then run the Gradle build from the repository root:
+Builds run on GitHub Actions, not locally. Push a release tag starting with `v`
+(for example, `v1.0.0`) to trigger the release workflow:
 
 ```sh
-./gradlew build
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-The build output is written under `build/`. No released download is advertised here; check the project's official repository for release information.
+The workflow builds with Java 25, attaches the installable JAR to a GitHub Release,
+and includes compatibility information, build provenance, and automatically generated
+release notes. Regular branch pushes and pull requests do not trigger this workflow.
+The mod version comes from `gradle.properties`; update it before tagging a new version.
+Download published builds from the repository's Releases page.
 
 ## Contributing
 

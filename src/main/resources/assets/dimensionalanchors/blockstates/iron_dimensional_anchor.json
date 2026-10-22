@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "dimensionalanchors:block/iron_dimensional_anchor"
+    }
+  }
+}

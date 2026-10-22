@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "dimensionalanchors:block/diamond_dimensional_anchor"
+  }
+}

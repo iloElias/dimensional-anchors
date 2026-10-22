@@ -1,117 +1,109 @@
 package com.iloelias.dimensionalanchors;
 
+import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
-import com.mojang.logging.LogUtils;
-
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-// The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(DimensionalAnchors.MODID)
 public class DimensionalAnchors {
-    // Define mod id in a common place for everything to reference
     public static final String MODID = "dimensionalanchors";
-    // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
-    // Create a Deferred Register to hold Blocks which will all be registered under the "dimensionalanchors" namespace
+
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
-    // Create a Deferred Register to hold Items which will all be registered under the "dimensionalanchors" namespace
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
-    // Create a Deferred Register to hold CreativeModeTabs which will all be registered under the "dimensionalanchors" namespace
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
+            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
-    // Creates a new Block with the id "dimensionalanchors:example_block", combining the namespace and path
-    public static final DeferredBlock<Block> EXAMPLE_BLOCK = BLOCKS.registerSimpleBlock("example_block", p -> p.mapColor(MapColor.STONE));
-    // Creates a new BlockItem with the id "dimensionalanchors:example_block", combining the namespace and path
-    public static final DeferredItem<BlockItem> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem("example_block", EXAMPLE_BLOCK);
+    public static final DeferredBlock<Block> COPPER_DIMENSIONAL_ANCHOR =
+            registerAnchor("copper_dimensional_anchor", Blocks.COPPER_ORE);
+    public static final DeferredBlock<Block> IRON_DIMENSIONAL_ANCHOR =
+            registerAnchor("iron_dimensional_anchor", Blocks.IRON_ORE);
+    public static final DeferredBlock<Block> GOLD_DIMENSIONAL_ANCHOR =
+            registerAnchor("gold_dimensional_anchor", Blocks.GOLD_ORE);
+    public static final DeferredBlock<Block> DIAMOND_DIMENSIONAL_ANCHOR =
+            registerAnchor("diamond_dimensional_anchor", Blocks.DIAMOND_ORE);
+    public static final DeferredBlock<Block> NETHERITE_DIMENSIONAL_ANCHOR =
+            registerAnchor("netherite_dimensional_anchor", Blocks.ANCIENT_DEBRIS);
 
-    // Creates a new food item with the id "dimensionalanchors:example_id", nutrition 1 and saturation 2
-    public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.registerSimpleItem("example_item", p -> p.food(new FoodProperties.Builder()
-            .alwaysEdible().nutrition(1).saturationModifier(2f).build()));
+    public static final DeferredBlock<Block> DIMENSIONAL_LIMITER_BLOCK =
+            registerUtilityBlock("dimensional_limiter_block");
+    public static final DeferredBlock<Block> DIMENSIONAL_EXIT_BLOCK =
+            registerUtilityBlock("dimensional_exit_block");
 
-    // Creates a creative tab with the id "dimensionalanchors:example_tab" for the example item, that is placed after the combat tab
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
-            .title(Component.translatable("itemGroup.dimensionalanchors")) //The language key for the title of your CreativeModeTab
-            .withTabsBefore(CreativeModeTabs.COMBAT)
-            .icon(() -> EXAMPLE_ITEM.get().getDefaultInstance())
-            .displayItems((parameters, output) -> {
-                output.accept(EXAMPLE_ITEM.get());// Add the example item to the tab. For your own tabs, this method is preferred over the event
-            }).build());
+    public static final DeferredItem<BlockItem> COPPER_DIMENSIONAL_ANCHOR_ITEM =
+            ITEMS.registerSimpleBlockItem("copper_dimensional_anchor", COPPER_DIMENSIONAL_ANCHOR);
+    public static final DeferredItem<BlockItem> IRON_DIMENSIONAL_ANCHOR_ITEM =
+            ITEMS.registerSimpleBlockItem("iron_dimensional_anchor", IRON_DIMENSIONAL_ANCHOR);
+    public static final DeferredItem<BlockItem> GOLD_DIMENSIONAL_ANCHOR_ITEM =
+            ITEMS.registerSimpleBlockItem("gold_dimensional_anchor", GOLD_DIMENSIONAL_ANCHOR);
+    public static final DeferredItem<BlockItem> DIAMOND_DIMENSIONAL_ANCHOR_ITEM =
+            ITEMS.registerSimpleBlockItem("diamond_dimensional_anchor", DIAMOND_DIMENSIONAL_ANCHOR);
+    public static final DeferredItem<BlockItem> NETHERITE_DIMENSIONAL_ANCHOR_ITEM =
+            ITEMS.registerSimpleBlockItem("netherite_dimensional_anchor", NETHERITE_DIMENSIONAL_ANCHOR);
+    public static final DeferredItem<BlockItem> DIMENSIONAL_LIMITER_BLOCK_ITEM =
+            ITEMS.registerSimpleBlockItem("dimensional_limiter_block", DIMENSIONAL_LIMITER_BLOCK);
+    public static final DeferredItem<BlockItem> DIMENSIONAL_EXIT_BLOCK_ITEM =
+            ITEMS.registerSimpleBlockItem("dimensional_exit_block", DIMENSIONAL_EXIT_BLOCK);
 
-    // The constructor for the mod class is the first code that is run when your mod is loaded.
-    // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
+    public static final DeferredItem<Item> DIMENSIONAL_CATALYST =
+            ITEMS.registerSimpleItem("dimensional_catalyst");
+    public static final DeferredItem<Item> DIMENSIONAL_UPGRADE_TEMPLATE =
+            ITEMS.registerSimpleItem("dimensional_upgrade_template");
+    public static final DeferredItem<Item> DIMENSIONAL_KEY =
+            ITEMS.registerSimpleItem("dimensional_key");
+    public static final DeferredItem<Item> UNASSIGNED_DIMENSIONAL_KEY =
+            ITEMS.registerSimpleItem("unassigned_dimensional_key");
+
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CONTENTS_TAB =
+            CREATIVE_MODE_TABS.register("contents", () -> CreativeModeTab.builder()
+                    .title(Component.translatable("itemGroup.dimensionalanchors"))
+                    .icon(() -> COPPER_DIMENSIONAL_ANCHOR_ITEM.get().getDefaultInstance())
+                    .displayItems((parameters, output) -> {
+                        output.accept(COPPER_DIMENSIONAL_ANCHOR_ITEM.get());
+                        output.accept(IRON_DIMENSIONAL_ANCHOR_ITEM.get());
+                        output.accept(GOLD_DIMENSIONAL_ANCHOR_ITEM.get());
+                        output.accept(DIAMOND_DIMENSIONAL_ANCHOR_ITEM.get());
+                        output.accept(NETHERITE_DIMENSIONAL_ANCHOR_ITEM.get());
+                        output.accept(UNASSIGNED_DIMENSIONAL_KEY.get());
+                        output.accept(DIMENSIONAL_KEY.get());
+                        output.accept(DIMENSIONAL_CATALYST.get());
+                        output.accept(DIMENSIONAL_UPGRADE_TEMPLATE.get());
+                        output.accept(DIMENSIONAL_LIMITER_BLOCK_ITEM.get());
+                        output.accept(DIMENSIONAL_EXIT_BLOCK_ITEM.get());
+                    })
+                    .build());
+
     public DimensionalAnchors(IEventBus modEventBus, ModContainer modContainer) {
-        // Register the commonSetup method for modloading
-        modEventBus.addListener(this::commonSetup);
-
-        // Register the Deferred Register to the mod event bus so blocks get registered
         BLOCKS.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
-
-        // Register ourselves for server and other game events we are interested in.
-        // Note that this is necessary if and only if we want *this* class (DimensionalAnchors) to respond directly to events.
-        // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
-        NeoForge.EVENT_BUS.register(this);
-
-        // Register the item to a creative tab
-        modEventBus.addListener(this::addCreative);
-
-        // Register our mod's ModConfigSpec so that FML can create and load the config file for us
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
-    private void commonSetup(FMLCommonSetupEvent event) {
-        // Some common setup code
-        LOGGER.info("HELLO FROM COMMON SETUP");
-
-        if (Config.LOG_DIRT_BLOCK.getAsBoolean()) {
-            LOGGER.info("DIRT BLOCK >> {}", BuiltInRegistries.BLOCK.getKey(Blocks.DIRT));
-        }
-
-        LOGGER.info("{}{}", Config.MAGIC_NUMBER_INTRODUCTION.get(), Config.MAGIC_NUMBER.getAsInt());
-
-        Config.ITEM_STRINGS.get().forEach((item) -> LOGGER.info("ITEM >> {}", item));
+    private static DeferredBlock<Block> registerAnchor(String name, Block soundReference) {
+        return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
+                .mapColor(MapColor.METAL)
+                .sound(soundReference.defaultBlockState().getSoundType())));
     }
 
-    // Add the example block item to the building blocks tab
-    private void addCreative(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
-            event.accept(EXAMPLE_BLOCK_ITEM);
-        }
-    }
-
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
-    @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
-        LOGGER.info("HELLO from server starting");
+    private static DeferredBlock<Block> registerUtilityBlock(String name) {
+        return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
+                .mapColor(MapColor.STONE)
+                .sound(Blocks.STONE.defaultBlockState().getSoundType())));
     }
 }

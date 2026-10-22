@@ -9,6 +9,7 @@ Contributions should be focused, reviewable, and consistent with the topic docum
 - Keep changes limited to the issue or behavior being addressed; avoid unrelated cleanup.
 - Do not add, generate, or edit sprite PNG files. Asset art is supplied by the project owner.
 - Do not claim compatibility or test results that have not been verified.
+- Do not compile the mod locally. Builds and release artifacts are produced by the GitHub Actions workflow on `v*` tag pushes; use lightweight static checks locally.
 
 ## Commit messages
 

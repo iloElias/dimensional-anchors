@@ -1,13 +1,21 @@
 {
-  "itemGroup.dimensionalanchors": "Example Mod Tab",
-  "block.dimensionalanchors.example_block": "Example Block",
-  "item.dimensionalanchors.example_item": "Example Item",
-
-  "dimensionalanchors.configuration.title": "Dimensional Anchors Configs",
-  "dimensionalanchors.configuration.section.dimensionalanchors.common.toml": "Dimensional Anchors Configs",
-  "dimensionalanchors.configuration.section.dimensionalanchors.common.toml.title": "Dimensional Anchors Configs",
-  "dimensionalanchors.configuration.items": "Item List",
-  "dimensionalanchors.configuration.logDirtBlock": "Log Dirt Block",
-  "dimensionalanchors.configuration.magicNumberIntroduction": "Magic Number Text",
-  "dimensionalanchors.configuration.magicNumber": "Magic Number"
+  "itemGroup.dimensionalanchors": "Dimensional Anchors",
+  "block.dimensionalanchors.copper_dimensional_anchor": "Copper Dimensional Anchor",
+  "block.dimensionalanchors.iron_dimensional_anchor": "Iron Dimensional Anchor",
+  "block.dimensionalanchors.gold_dimensional_anchor": "Gold Dimensional Anchor",
+  "block.dimensionalanchors.diamond_dimensional_anchor": "Diamond Dimensional Anchor",
+  "block.dimensionalanchors.netherite_dimensional_anchor": "Netherite Dimensional Anchor",
+  "block.dimensionalanchors.dimensional_limiter_block": "Dimensional Boundary",
+  "block.dimensionalanchors.dimensional_exit_block": "Dimensional Exit",
+  "item.dimensionalanchors.copper_dimensional_anchor": "Copper Dimensional Anchor",
+  "item.dimensionalanchors.iron_dimensional_anchor": "Iron Dimensional Anchor",
+  "item.dimensionalanchors.gold_dimensional_anchor": "Gold Dimensional Anchor",
+  "item.dimensionalanchors.diamond_dimensional_anchor": "Diamond Dimensional Anchor",
+  "item.dimensionalanchors.netherite_dimensional_anchor": "Netherite Dimensional Anchor",
+  "item.dimensionalanchors.dimensional_limiter_block": "Dimensional Boundary",
+  "item.dimensionalanchors.dimensional_exit_block": "Dimensional Exit",
+  "item.dimensionalanchors.dimensional_catalyst": "Dimensional Catalyst",
+  "item.dimensionalanchors.dimensional_upgrade_template": "Dimensional Upgrade Template",
+  "item.dimensionalanchors.unassigned_dimensional_key": "Blank Dimensional Key",
+  "item.dimensionalanchors.dimensional_key": "Registered Dimensional Key"
 }

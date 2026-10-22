@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "dimensionalanchors:block/dimensional_exit_block"
+    }
+  }
+}

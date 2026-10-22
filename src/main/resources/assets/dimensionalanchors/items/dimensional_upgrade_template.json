@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "dimensionalanchors:item/dimensional_upgrade_template"
+  }
+}

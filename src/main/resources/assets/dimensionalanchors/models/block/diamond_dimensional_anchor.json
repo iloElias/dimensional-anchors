@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "dimensionalanchors:block/diamond_dimensional_anchor"
+  }
+}

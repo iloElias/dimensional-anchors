@@ -1,9 +1,15 @@
-name: Build
+name: Build and publish release
 
-on: [push, pull_request]
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,10 +27,69 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # This is needed to be able to run ./gradlew below
-      # You can run `git update-index --chmod +x gradlew` then remove this step.
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew --no-daemon build
+
+      - name: Collect release files
+        id: artifacts
+        shell: bash
+        run: |
+          mapfile -t files < <(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | sort)
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo 'No release artifacts were built.' >&2
+            exit 1
+          fi
+          {
+            echo 'files<<EOF'
+            printf '%s\n' "${files[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prepare release information
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+
+          properties = {}
+          for line in Path("gradle.properties").read_text().splitlines():
+              if line.strip() and not line.lstrip().startswith("#"):
+                  key, value = line.split("=", 1)
+                  properties[key.strip()] = value.strip()
+
+          run_url = (
+              f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
+              f"/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          )
+          body = (
+              f"## {properties['mod_name']} — {os.environ['RELEASE_TAG']}\n\n"
+              f"- Mod version: `{properties['mod_version']}`\n"
+              f"- Minecraft: `{properties['minecraft_version']}`\n"
+              f"- NeoForge: `{properties['neo_version']}`\n"
+              "- Java: `25`\n\n"
+              "### Installation\n\n"
+              "Install the matching NeoForge version and place the attached mod JAR "
+              "in your Minecraft instance's `mods` folder.\n\n"
+              f"Build provenance: [GitHub Actions run]({run_url}) "
+              f"(commit `{os.environ['GITHUB_SHA']}`).\n"
+          )
+          body_path = Path(os.environ["RUNNER_TEMP"]) / "release-notes.md"
+          body_path.write_text(body, encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"body_path={body_path}\n")
+        id: release_info
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: ${{ steps.release_info.outputs.body_path }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: ${{ steps.artifacts.outputs.files }}

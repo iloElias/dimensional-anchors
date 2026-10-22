@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "dimensionalanchors:block/iron_dimensional_anchor"
+  }
+}
