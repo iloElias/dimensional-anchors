@@ -17,24 +17,23 @@
 
 - An iron pickaxe or a higher-tier pickaxe extracts the anchor as an item, preserving its information and room.
 - Inadequate tools, including bare hands, make no breaking progress.
-- While extracted, the room is inaccessible, including through existing keys.
-- All players inside are expelled under the [return policy](TRAVEL.md). Non-player entities remain inside.
+- While the anchor is absent from the world, the room is preserved but new entry is suspended, including through existing keys.
+- Collecting/extracting the anchor does not expel or teleport players already inside. They remain in the room and can leave normally.
+- Non-player entities remain inside the preserved room.
 - Placing the anchor again reopens the same room; existing registered keys remain valid. Registration is not reset.
 - Relocation does not move or reallocate the room in the pocket dimension.
-- If an occupant disconnects inside and the anchor is placed again before they reconnect, they resume inside the same room, including after exterior relocation.
-- If the anchor remains extracted at reconnect, return the player to the location recorded at the latest extraction. If destroyed while they are offline, use the nonlethal destruction fallback.
-- An explosion that leaves a surviving anchor-item drop follows the same preservation and expulsion rules. If the item is subsequently destroyed, permanent destruction applies.
+- If an occupant disconnects inside while the anchor is absent and the same room is recovered/reopened before they reconnect, they resume inside. If it is still unavailable, preserve their room session; they may reconnect there and leave, but may not newly enter.
+- An explosion that leaves a surviving anchor-item drop makes the room unavailable to new entrants but does not expel current occupants. Destruction of the dropped item also preserves the room and region.
 
-## Permanent destruction
+## Block destruction and room preservation
 
-- Removing the anchor without a surviving item through an explosion permanently destroys its room, contents, and reserved space.
-- Destruction of the extracted item, including lava, void loss, or dropped-item despawning, also destroys the room. Misplacing an item that still exists is not destruction.
-- Connected occupants die with the exact message `The universe forgot <player>`, using the actual player's name.
-- Disconnected occupants return alive to their personal respawn point on reconnect, falling back to Overworld world spawn if invalid.
-- Respect `keepInventory`. When disabled, inventory drops disappear with the room; they are not relocated or recoverable.
-- Living non-player entities die; other entities and resulting drops are removed with the room.
-- Keys and their copies cannot restore destroyed rooms. Prevent stale or duplicated anchor items from reviving a destroyed identity.
-- Delete only the affected room, never the shared dimension or neighboring rooms.
+- Destroying the anchor block or later destroying/despawning its dropped item does not delete the room, its contents, or its reserved region.
+- When the anchor block is absent because it was destroyed, suspend new entry through every registered key until a recovery process is defined and restores access.
+- Players already inside remain there; they are not killed or teleported because the anchor block was destroyed. They can leave using normal room exit controls.
+- Disconnected occupants are not killed or relocated by room preservation. They may resume their existing room session and leave, but cannot initiate a new entry while the room is unavailable.
+- There is no destruction death message, room cleanup, or region reclamation for anchor-block destruction.
+- Destruction of the room itself is out of scope under this simplified lifecycle. Do not implement cleanup that deletes its contents or makes the region available to another anchor.
+- Recovery/reactivation after permanent loss of the anchor block remains undefined. Keys do not bypass the unavailable state.
 
 ## Explosion resistance
 
@@ -57,8 +56,8 @@ This specifies blast resistance only, not mining hardness or dropped-item immuni
 | Unregistered | Not physically generated | Unavailable | None |
 | Registered and placed | Generated on first access | Valid registered key | Normal behavior |
 | All keys lost | Preserved | Unavailable; no replacement/reset | Keyless south-wall exit remains available |
-| Extracted or surviving explosion drop | Preserved | Unavailable | Players expelled; other entities remain |
-| Replaced | Same identity and contents | Existing keys remain valid | Pending offline expulsions still apply |
-| Permanently destroyed | Irrecoverably deleted | Permanently unavailable | Online players die; offline players receive the nonlethal respawn exception |
+| Anchor extracted or surviving explosion drop | Preserved | New entry suspended | Existing players and non-player entities remain; players can exit |
+| Anchor replaced/recovered | Same identity and contents | Existing keys work again | Existing room sessions continue |
+| Anchor block/item destroyed | Preserved; region not reclaimed | Unavailable pending an undefined recovery process | Current and disconnected occupants are not killed or teleported; they can leave |
 
-Technical questions about removal hooks, persistence, and cleanup are tracked in [open questions](OPEN_QUESTIONS.md).
+Technical questions about recovery, removal hooks, and persistence are tracked in [open questions](OPEN_QUESTIONS.md).

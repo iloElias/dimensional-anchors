@@ -18,25 +18,20 @@
 | Event | Primary destination/outcome | If primary destination is invalid |
 | --- | --- | --- |
 | Normal exit | Recorded last exterior position and dimension | Valid personal respawn, then Overworld world spawn |
-| Extraction, player online | Anchor position and dimension at removal | Valid personal respawn, then Overworld world spawn |
-| Extraction, player offline; anchor still extracted on reconnect | Same recorded extraction return on reconnect | Valid personal respawn, then Overworld world spawn |
-| Extraction, player offline; anchor placed again before reconnect | Resume inside the same room | Not applicable |
-| Destruction, player online inside | Death under the [destruction rules](ANCHORS.md) | Normal death/respawn handling |
-| Destruction, player offline inside | Return alive to personal respawn on reconnect | Overworld world spawn |
+| Anchor extracted/destroyed while player is inside | Stay in the preserved room | Not applicable; player can exit normally |
+| Player reconnects while room's anchor is absent | Resume existing room session; no new entry | Not applicable |
+| Room's anchor is recovered/replaced | Existing occupants remain; new key entries resume | Not applicable |
 
-- Extraction overrides normal key-entry return points.
-- If an offline occupant's anchor is placed again before they reconnect, they resume inside the same preserved room, including if the anchor was relocated in the exterior world.
-- If the anchor remains extracted at reconnect, return the player to the exterior location recorded at its latest extraction. If that location is invalid, use valid personal respawn, then Overworld world spawn.
-- Re-evaluate current room lifecycle at reconnect: a placed, live anchor restores the room session; an extracted anchor returns the player outside; a destroyed anchor uses the nonlethal destruction fallback.
-- If the room is destroyed while its occupant is offline, destruction takes precedence over a pending extraction return: return them alive to personal respawn, then Overworld world spawn.
-- After an extracted-anchor return, the player can subsequently enter again with a valid key.
-- A destroyed room's disconnected occupants receive the approved nonlethal exception rather than a delayed destruction death.
+- Collecting or destroying the anchor does not interrupt or teleport players already inside. They may use the room's normal key exit or south-wall control block.
+- While the anchor is absent, suspend new entries by key. This also applies when the block or dropped item is destroyed; destruction does not delete the room.
+- An occupant who disconnects inside resumes their existing session on reconnect. If the anchor remains absent, they can leave but cannot newly enter. If the anchor was recovered, the room is available for normal key entry again.
+- No pending extraction return or destruction-death outcome is created by anchor removal under this simplified design.
 - Personal respawn can be invalid because it is missing, obstructed, depleted, or in an unavailable dimension. Use vanilla personal-respawn resolution before world spawn.
-- Persist applicable outcomes so reconnecting cannot restore deleted rooms or bypass pending returns.
+- Persist the player's room session and anchor availability so reconnecting cannot enter through an absent anchor or lose access to an existing room session.
 
 ## Safety and planning
 
 - Validate entry landing and return destinations; arbitrary saved coordinates are not automatically safe merely because respawn uses vanilla rules.
-- Handle blocked destinations, unavailable dimensions, unloaded chunks, invalid saved data, disconnections, and restarts.
+- Handle blocked destinations, unavailable dimensions, unloaded chunks, invalid saved data, disconnections, and restarts for normal exit only.
 - Never report an unsafe return as successful or strand a player silently.
-- Nearby safe-position search bounds and spawn obstruction handling still require technical planning.
+- Nearby safe-position search bounds and spawn obstruction handling still require technical planning for normal exit.

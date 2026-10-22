@@ -8,7 +8,7 @@
 - Each room receives an exclusive, non-overlapping region reserved for its maximum supported size.
 - Generate physical contents on first access after registration. Reserve before generation to avoid overlapping concurrent allocations.
 - Expand inside the reserved region without relocating existing contents.
-- Determine spacing from supported configurable maximums; four-chunk spacing is not approved.
+- Tier dimensions are fixed at the five approved defaults for now; they are not configurable. Determine spacing from the largest fixed room; four-chunk spacing is not approved.
 - Rendering/view distance is not protection. A forced view distance of three is not an approved requirement.
 - Enforce room bounds and access server-side even when another player or mod loads nearby regions.
 - Support persistent room/anchor mappings and migration when saved data changes.
@@ -18,7 +18,7 @@
 - Use vanilla The End as the reference for environmental settings: lighting, sky/time presentation, weather, and dimension-type behavior.
 - Verify the actual target-version settings and conventions.
 - This is not the real End: do not add End islands, structures, portals, or a dragon fight.
-- Biome and natural spawning need explicit planning; dimension type alone does not define them.
+- Use a custom mod biome. Do not allow natural entity spawning in the pocket dimension.
 
 ## Resource use
 
@@ -35,7 +35,7 @@
 - Compatibility with every other mod's machinery or behavior is not guaranteed.
 - Preserve block data and inventories during expansion/upgrades, while enforcing boundaries against bypass mechanics.
 - Non-player entities can exist inside; the mod supplies no mechanism to transport them in.
-- On extraction, non-player entities stay in the preserved room while players are expelled.
-- On destruction, living entities die and other entities and drops are removed with the room.
+- On anchor extraction/destruction, players and non-player entities remain in the preserved room; existing players can exit, but new entry is suspended while the anchor is absent.
+- Anchor-block destruction does not delete room blocks, entities, or the reserved region.
 
-Allocation limits, cleanup/reuse, biome/spawning, persistence APIs, and removal compatibility require [technical planning](OPEN_QUESTIONS.md).
+Allocation limits, biome implementation, persistence APIs, and removal compatibility require [technical planning](OPEN_QUESTIONS.md).

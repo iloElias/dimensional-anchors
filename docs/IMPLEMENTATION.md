@@ -52,12 +52,12 @@ The exact types and serialization API depend on the assessment. The model must r
 
 | Concern | Required information |
 | --- | --- |
-| Anchor/room | Stable identity, tier, registration, placed/extracted/destroyed state, exterior location/dimension, allocated region, generation status, data version |
+| Anchor/room | Stable identity, tier, registration, placed/absent/unavailable state, exterior location/dimension, allocated region, generation status, data version |
 | Key | Blank/registered state and anchor/room reference; separate-copy identifiers only if justified |
 | Player session | Current room, one last exterior return position/dimension, and any pending lifecycle outcome needed to resolve reconnect |
-| Allocation | Reserved regions and bounds, supported maximum size, generation/cleanup progress where needed |
+| Allocation | Reserved regions and bounds for fixed tier sizes, generation progress, and permanent reservation state |
 
-Preserve identities through upgrades and relocation. Prevent stale keys or duplicate anchor items from reviving destroyed identities. Define restart recovery and concurrent-operation ordering before destructive features.
+Preserve identities through upgrades and relocation. Prevent stale keys or duplicate anchor items from bypassing an unavailable-room state. Define restart recovery and concurrent-operation ordering before lifecycle changes.
 
 Do not add owner/invitation authorization: valid key possession is the approved entry model.
 
@@ -75,7 +75,7 @@ Each stage requires its applicable approvals and a verified checkpoint. Do not e
 
 ### 2. Allocation, geometry, and room generation
 
-Prerequisites: approved dimension/configuration limits, biome/spawning, and door layout where required.
+Prerequisites: verified fixed-size allocation and approved biome/single-control-block settings.
 
 - Add the shared empty dimension with End-like environmental settings.
 - Reserve non-overlapping maximum-size regions; generate the physical room only on first access after registration.
@@ -100,29 +100,29 @@ Prerequisites: approved dimension/configuration limits, biome/spawning, and door
 - Preserve room identity, registration, allocation, contents, and existing keys through every upgrade.
 - Implement anvil copying: retain original key, consume one blank, cost one level, no wear, unlimited copies.
 - Verify repeated collection and shift-click cannot produce free outputs or lose the original.
-- Allow copies of destroyed-room keys without restoring access.
-- Verify distinct key sprites once supplied; implement the destroyed-room tooltip only with reliable synchronized status.
+- Allow copies of keys for unavailable rooms without restoring access.
+- Verify distinct key sprites once supplied; implement an unavailable-anchor tooltip only with reliable synchronized status.
 
 ### 5. Extraction and relocation
 
 - Iron-or-better pickaxes extract; inadequate tools make no breaking progress.
-- Preserve room contents and non-player entities while denying entry to an extracted anchor.
-- Expel online players to the recorded removal location.
-- On reconnect after extraction, resume inside the same room if the anchor has been placed again; if it remains extracted, return to its latest removal location. If destroyed while offline, use the nonlethal destruction fallback.
+- Preserve room contents, players, and non-player entities when the anchor is collected.
+- Suspend new entries while the anchor is absent; current occupants remain and can exit normally or via the south-wall control block.
+- On reconnect, an occupant resumes their existing room session even while the anchor is absent; new entries remain suspended.
 - Replacing the anchor preserves the same room and existing keys.
-- Verify removal, replacement, and restart behavior before enabling permanent deletion.
+- Verify collection, replacement, and restart behavior. Do not implement room deletion.
 
-### 6. Destruction and failure recovery
+### 6. Anchor destruction and access recovery
 
-Prerequisites: approved removal classification; validated persistence and cleanup plan.
+Prerequisite: an approved recovery mechanism before implementing reactivation after permanent anchor loss.
 
-- Distinguish surviving explosion drops from destruction and detect later anchor-item loss through lava, void, or despawning.
+- Anchor block/item destruction preserves the room, occupants, entities, contents, and reserved region.
+- Suspend new entries while the anchor is absent/destroyed; current occupants remain and may leave.
+- Do not kill/teleport occupants, remove inventory drops, delete room contents, or reclaim its region when the anchor is destroyed.
+- Distinguish an absent anchor from chunk unload or an item that still exists but is misplaced.
 - Apply the approved blast-resistance reference per tier.
-- Kill online occupants with `The universe forgot <player>`; return offline destruction survivors alive to personal respawn or Overworld spawn.
-- Respect `keepInventory`; remove unrecoverable drops and non-player entities with the destroyed room.
-- Persist permanent invalidation before allowing stale references to access or recreate the room.
-- Clean only the affected region; do not reclaim regions without approved reuse policy.
-- Verify restart/interruption recovery using disposable test worlds, never valuable saves.
+- Preserve unavailable state across restarts. Keys cannot bypass it; recovery/reactivation remains an approval gate.
+- Verify restart/interruption handling using disposable test worlds, never valuable saves.
 
 ### 7. Multiplayer and release verification
 
@@ -135,10 +135,9 @@ Prerequisites: approved removal classification; validated persistence and cleanu
 
 Consult [open questions](design/OPEN_QUESTIONS.md) before each stage. In particular:
 
-- Door/control layout and final presentation where needed.
-- Configuration maximums, allocation limits, and changes to existing rooms.
-- Biome/natural spawning and safe-destination policy details.
-- Commands/modded removal, cleanup safety, and whether region reuse is permitted.
+- Recovery after permanent anchor loss, allocation-capacity behavior, and remaining block presentation.
+- Custom-biome details and safe-destination policy.
+- Commands/modded removal and saved-data corruption handling.
 
 Do not let an unrelated late-stage question block read-only assessment or independent approved foundation work. Conversely, do not bake an unapproved answer into persistent data or gameplay.
 

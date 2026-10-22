@@ -15,7 +15,7 @@ The approved decisions previously collected in this file are now organized by to
 
 | Document | Scope |
 | --- | --- |
-| [Anchor blocks and lifecycle](design/ANCHORS.md) | Identity, activation, extraction, relocation, destruction, blast resistance, and lifecycle table |
+| [Anchor blocks and lifecycle](design/ANCHORS.md) | Identity, activation, extraction, relocation, room preservation, blast resistance, and lifecycle table |
 | [Dimensional keys](design/KEYS.md) | Authorization, charging, cooldown, registration, anvil copies, loss, and visual states |
 | [Travel and return](design/TRAVEL.md) | Normal exit, room-to-room travel, safe fallbacks, and disconnected players |
 | [Room geometry and boundaries](design/ROOMS.md) | Tier sizes, fixed-floor expansion, south-wall door, entry, and boundary deaths |

@@ -27,7 +27,7 @@ These requirements consolidate the original and subsequent plans. They are not c
 - Enforce maximum key stack size one and distinct blank/registered sprites, including registered copies.
 - Copy in an anvil while preserving the original, consuming one blank and exactly one level only upon collection, without anvil wear.
 - Test shift-click, repeated output interaction, and copying from copies without free copies or escalating costs.
-- Permit unlimited copies, including destroyed-room keys, without restoration/access. Check the tooltip if implemented.
+- Permit unlimited copies of keys to unavailable rooms without bypassing the unavailable state. Check the unavailable-anchor tooltip if implemented.
 - Losing every key denies entry without resetting registration or deleting the room; keyless south-wall exit remains available.
 
 ### Travel and lifecycle
@@ -38,17 +38,15 @@ These requirements consolidate the original and subsequent plans. They are not c
 - Check north-facing entry and door behind the player for every tier.
 - Check normal return position/dimension, personal-respawn then Overworld-spawn fallbacks, blocked destinations, and unavailable dimensions.
 - Persist per-player return/session state across disconnect and server restart.
-- Extract occupied anchors with qualifying pickaxes; expel players but keep non-player entities/content inside.
+- Extract occupied anchors with qualifying pickaxes; preserve all occupants, non-player entities, and contents.
 - Prevent all breaking progress with inadequate tools; permit any player to register, extract, or destroy.
 - Preserve room position, contents, identity, and keys when replacing the anchor.
-- Verify offline extraction/reconnect: resume inside if the anchor was replaced (including after relocation), return to the latest removal location if it remains extracted, and use nonlethal respawn if destroyed while offline.
-- Distinguish surviving explosion drops from permanent destruction, including later lava/void/despawn destruction.
+- Verify connected and disconnected occupants remain inside after collection, explosion-drop, or block/item destruction; they can exit without a key.
+- Suspend new key entry while the anchor is absent and re-enable it only after recovery/replacement.
+- Verify block/item destruction never deletes room blocks, entities, contents, or its reserved region.
 - Compare each tier's blast resistance with its approved reference block, using Ancient Debris for Netherite.
-- Destroy the occupied room irreversibly; verify online deaths and exact `The universe forgot <player>` message.
-- Verify disconnected destruction survivors return alive to personal respawn or Overworld spawn.
-- Respect `keepInventory`; when disabled, inventory drops disappear with the room.
-- Apply death/removal and cleanup to non-player entities only on destruction, not extraction.
-- Prevent stale keys or duplicated anchor items from reviving deleted rooms; protect neighboring rooms.
+- Verify anchor removal does not trigger an anchor-destruction death message, death, respawn, inventory drop, entity cleanup, or region deletion.
+- Prevent duplicated/stale keys from bypassing the unavailable state; protect neighboring rooms.
 
 ### Geometry, protection, and performance
 
@@ -58,6 +56,6 @@ These requirements consolidate the original and subsequent plans. They are not c
 - Exercise boundary mining/replacement, explosions, piston/fluid/fire mechanics, pearls, other teleports, flight, knockback, commands, and relevant modded behavior.
 - Verify exact boundary death message `<player> tried to access places beyond imagination`, normal death consequences, no false wall deaths, and no repeated/recursive deaths.
 - Distinguish legitimate exits/internal teleports from violations; test login, respawn, invalid coordinates, and client position manipulation.
-- Check dedicated-server multiplayer, configuration validation, no unbounded world scans/ticking/allocation, and no unnecessary inactive-room chunk loading.
+- Check dedicated-server multiplayer, fixed tier dimensions, no unbounded world scans/ticking/allocation, and no unnecessary inactive-room chunk loading.
 
 Do not claim compatibility or a passed check without executing and inspecting the relevant evidence. Documentation organization alone requires no game build.

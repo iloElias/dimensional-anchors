@@ -2,7 +2,7 @@
 
 ## Subsequent Design Decisions
 
-Start with the [design index](DESIGN_DECISIONS.md) and its topic documents. Their confirmed decisions supersede conflicting requirements here, including the original portable-key anchor concept, invitation-based entry, symmetric vertical expansion, and original recipe proposals. Requirements not superseded remain applicable. The original text below is retained as a historical baseline; open questions must be interpreted in light of the subsequent decisions.
+Start with the [design index](DESIGN_DECISIONS.md) and its topic documents. Their confirmed decisions supersede conflicting requirements here, including the original portable-key anchor concept, invitation-based entry, symmetric vertical expansion, original recipe proposals, and anchor-removal lifecycle. Collecting or destroying the anchor no longer ejects occupants or deletes the room; new entry is suspended until the anchor is available/recovered. Requirements not superseded remain applicable. The original text below is retained as a historical baseline; open questions must be interpreted in light of the subsequent decisions.
 
 ## 1. Project Overview
 

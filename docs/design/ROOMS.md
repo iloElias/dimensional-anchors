@@ -4,7 +4,7 @@
 
 ## Usable interior
 
-Dimensions exclude walls, floor, and ceiling. These defaults remain server-configurable:
+Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; no dimension-size configuration is planned:
 
 | Tier | Interior | Interior volume |
 | --- | --- | --- |
@@ -22,18 +22,18 @@ Dimensions exclude walls, floor, and ceiling. These defaults remain server-confi
 - A 3-to-5 horizontal expansion adds one block to each side, preserving the centered arrangement.
 - Odd/even transitions require consistent horizontal rounding. The unavoidable extra block goes to a fixed side without moving constructions. The exact coordinate formula remains technical planning.
 - Upgrades are permanent; downgrades are unsupported.
-- Move boundary walls and the south-wall door to the new limits without overwriting interior constructions or exposing neighboring regions.
+- Move boundary walls and the single south-wall control block to the new limits without overwriting interior constructions or exposing neighboring regions.
 - Expand within the region reserved for the maximum supported room size.
 
 ## South-wall door and entry
 
-- The initial south wall is a 3 x 3 door/control area, directly behind the entering player.
-- The control/exit function is distinct from ordinary boundary blocks and requests server-authoritative exit.
-- Move entry position with the south-wall door so entry remains in front of it, facing north.
+- The initial south wall has one dedicated door/control block, directly behind the entering player. The surrounding blocks are ordinary protected boundary blocks.
+- The control/exit block is distinct from ordinary boundary blocks and requests server-authoritative exit.
+- Move the control block with the south wall so it stays behind the player; entry remains inside the room, facing north.
 - Orientation does not depend on the exterior facing direction.
 - Safe landing checks are required if players build at the intended entry position.
-- The door/control area cannot be broken, replaced, or moved through ordinary gameplay and must not lead into another room.
-- Whether every block of the 3 x 3 area is interactive or only a dedicated control block remains open.
+- The control block cannot be broken, replaced, or moved through ordinary gameplay and must not lead into another room.
+- The south wall has one dedicated control/exit block. The rest of the boundary remains ordinary protected boundary.
 
 ## Boundary protection
 
@@ -48,7 +48,7 @@ Dimensions exclude walls, floor, and ceiling. These defaults remain server-confi
 
 - Use the actual player name and supported target-version death APIs.
 - Respect normal death rules, including `keepInventory`.
-- This reason is distinct from anchor destruction, whose message is `The universe forgot <player>`.
+- Anchor collection or destruction does not cause a death message or remove occupants. This boundary-violation death applies only when a player leaves the permitted interior through unauthorized movement or teleportation.
 - Normal wall movement must not cause false deaths. Process legitimate exits and internal mod teleports correctly before violation enforcement.
 - Cover login, respawn, invalid coordinates, and client position manipulation without recursive or repeated death events.
 

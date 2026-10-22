@@ -44,7 +44,7 @@ Combine a registered key in the first input with a blank key in the second input
 - The anvil suffers no wear or damage from copying. Repeated copies do not increase the fixed cost.
 - Copies can generate further copies. No copy limit or additional copying permission applies.
 - Copying does not create, duplicate, upgrade, or activate a room.
-- Keys to destroyed rooms can still be copied, but originals and copies remain unusable.
+- Keys to rooms whose anchor is absent can still be copied, but originals and copies cannot bypass suspended entry.
 - Investigate the target-version anvil API: ordinary behavior must not be assumed to preserve the first input. Shift-click and repeated collection must consume exactly one blank key and the required XP per copy.
 
 ## Loss and appearance
@@ -54,7 +54,7 @@ Combine a registered key in the first input with a blank key in the second input
 - Losing keys does not delete the room or invoke destruction death. Occupants can still leave through the south-wall control block without a key.
 - Lost or stolen keys cannot be revoked.
 - Blank and registered keys have different sprites. Registration changes the appearance; copies use the registered sprite.
-- If technically feasible, show `Linked room destroyed` for keys to confirmed destroyed rooms. An unloaded chunk or extracted anchor must never be mislabeled as destruction.
+- If technically feasible, show `Anchor unavailable` for keys whose anchor block is absent. An unloaded chunk must never be mislabeled as anchor loss.
 - Plan server-to-client status synchronization before claiming the tooltip is supported.
 
 The [blank-key recipe](RECIPES.md) is approved. Whether states use distinct item registrations and whether copies need individual identifiers remain technical choices.
