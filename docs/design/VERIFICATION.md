@@ -41,7 +41,7 @@ These requirements consolidate the original and subsequent plans. They are not c
 - Extract occupied anchors with qualifying pickaxes; expel players but keep non-player entities/content inside.
 - Prevent all breaking progress with inadequate tools; permit any player to register, extract, or destroy.
 - Preserve room position, contents, identity, and keys when replacing the anchor.
-- Resolve offline extraction at the recorded removal location; subsequent relocation does not retarget it.
+- Verify offline extraction/reconnect: resume inside if the anchor was replaced (including after relocation), return to the latest removal location if it remains extracted, and use nonlethal respawn if destroyed while offline.
 - Distinguish surviving explosion drops from permanent destruction, including later lava/void/despawn destruction.
 - Compare each tier's blast resistance with its approved reference block, using Ancient Debris for Netherite.
 - Destroy the occupied room irreversibly; verify online deaths and exact `The universe forgot <player>` message.

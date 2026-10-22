@@ -21,7 +21,8 @@
 - All players inside are expelled under the [return policy](TRAVEL.md). Non-player entities remain inside.
 - Placing the anchor again reopens the same room; existing registered keys remain valid. Registration is not reset.
 - Relocation does not move or reallocate the room in the pocket dimension.
-- Offline players' pending extraction returns are not canceled or retargeted by relocation.
+- If an occupant disconnects inside and the anchor is placed again before they reconnect, they resume inside the same room, including after exterior relocation.
+- If the anchor remains extracted at reconnect, return the player to the location recorded at the latest extraction. If destroyed while they are offline, use the nonlethal destruction fallback.
 - An explosion that leaves a surviving anchor-item drop follows the same preservation and expulsion rules. If the item is subsequently destroyed, permanent destruction applies.
 
 ## Permanent destruction

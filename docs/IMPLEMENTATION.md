@@ -54,7 +54,7 @@ The exact types and serialization API depend on the assessment. The model must r
 | --- | --- |
 | Anchor/room | Stable identity, tier, registration, placed/extracted/destroyed state, exterior location/dimension, allocated region, generation status, data version |
 | Key | Blank/registered state and anchor/room reference; separate-copy identifiers only if justified |
-| Player session | Current room, one last exterior return position/dimension, and any pending return or destruction-survivor outcome |
+| Player session | Current room, one last exterior return position/dimension, and any pending lifecycle outcome needed to resolve reconnect |
 | Allocation | Reserved regions and bounds, supported maximum size, generation/cleanup progress where needed |
 
 Preserve identities through upgrades and relocation. Prevent stale keys or duplicate anchor items from reviving destroyed identities. Define restart recovery and concurrent-operation ordering before destructive features.
@@ -107,14 +107,14 @@ Prerequisites: approved dimension/configuration limits, biome/spawning, and door
 
 - Iron-or-better pickaxes extract; inadequate tools make no breaking progress.
 - Preserve room contents and non-player entities while denying entry to an extracted anchor.
-- Expel online players to the recorded removal location and persist offline returns.
-- Keep pending offline extraction destinations unchanged after relocation.
+- Expel online players to the recorded removal location.
+- On reconnect after extraction, resume inside the same room if the anchor has been placed again; if it remains extracted, return to its latest removal location. If destroyed while offline, use the nonlethal destruction fallback.
 - Replacing the anchor preserves the same room and existing keys.
 - Verify removal, replacement, and restart behavior before enabling permanent deletion.
 
 ### 6. Destruction and failure recovery
 
-Prerequisites: approved removal classification and offline-event precedence; validated persistence and cleanup plan.
+Prerequisites: approved removal classification; validated persistence and cleanup plan.
 
 - Distinguish surviving explosion drops from destruction and detect later anchor-item loss through lava, void, or despawning.
 - Apply the approved blast-resistance reference per tier.
@@ -138,7 +138,6 @@ Consult [open questions](design/OPEN_QUESTIONS.md) before each stage. In particu
 - Door/control layout and final presentation where needed.
 - Configuration maximums, allocation limits, and changes to existing rooms.
 - Biome/natural spawning and safe-destination policy details.
-- Offline extraction followed by destruction before reconnect.
 - Commands/modded removal, cleanup safety, and whether region reuse is permitted.
 
 Do not let an unrelated late-stage question block read-only assessment or independent approved foundation work. Conversely, do not bake an unapproved answer into persistent data or gameplay.

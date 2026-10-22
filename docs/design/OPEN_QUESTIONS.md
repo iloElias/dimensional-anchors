@@ -16,7 +16,6 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
 
 - Exact horizontal rounding, door geometry, landing coordinates, allocation spacing, and migration formulas.
 - Persistent identity, room lifecycle, region reservations, pending returns, and saved-data versioning.
-- Precedence if an offline extraction is followed by permanent destruction before reconnect.
 - Key-copy validation versus illicit duplication, and whether individual copy identifiers are useful without revocation or copy limits.
 - Safe landing/return search bounds, unavailable dimensions, obstructed personal/world spawn, and bounded chunk loading.
 - Custom crafting/smithing preservation and anvil input/XP/output handling in the exact target version.
@@ -35,7 +34,7 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
 - Recipes are approved in [recipes](RECIPES.md).
 - Charge is 3 seconds, successful key cooldown is 20 seconds, and early cancellation has no penalty.
 - Inadequate tools make no breaking progress; iron-or-better pickaxes extract.
-- Relocation preserves keys and does not carry offline players with pending expulsions.
+- Relocation preserves keys. An offline occupant resumes inside if the anchor is placed again before reconnect; otherwise they return to the latest extraction location. Destruction while offline takes precedence and returns them alive to personal respawn, then Overworld world spawn.
 - One shared dimension, first-access generation, fixed floor, upward growth, and exterior-only return chaining are approved.
 - The End is the environmental reference, not a requirement to generate End terrain.
 
