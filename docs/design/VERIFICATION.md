@@ -187,6 +187,16 @@ uses real player item-use ticks in both hands and survival/creative:
 - One server-side Nether portal trigger sound event per started charge; no
   extra sound at completion or for invalid keys.
 - Explicit unlinked-preview rejection and unchanged blank-key behavior.
+- At charge completion, verify positive feedback for a registered, placed
+  anchor whose block/tier match; verify unavailable feedback for missing,
+  unregistered, unplaced, or stale records. The check must not force-load an
+  unloaded anchor chunk. Check the chorus-fruit sound on success and beacon
+  deactivation sound on failure.
+- Verify repeated registration attempts play the Vault rejection sound while
+  successful registration retains the Vault insertion sound.
+- This is not proof of travel. Once rooms are implemented, separately verify
+  full lifecycle revalidation, room availability, safe destination, and actual
+  teleportation at completion.
 
 Manual client checkpoint:
 
@@ -194,14 +204,17 @@ Manual client checkpoint:
 2. Hold use while aiming into the air: the bow-use pose starts and the Nether
    portal contact sound plays.
 3. Continue for three seconds: the completion message appears without releasing.
-   No teleport is expected; a 20-second vanilla cooldown overlay appears.
+   A valid placed anchor passes the entry check; a missing or stale anchor is
+   reported unavailable. No teleport is expected; a 20-second vanilla cooldown
+   overlay appears.
 4. Release earlier: the key returns to idle with no completion message or penalty.
 5. Repeat using the offhand and check first-/third-person presentation.
 6. During cooldown, switch to another copy or another registered key: use must
    remain blocked. After 20 seconds, charging becomes available again.
 
-Headless tests verify animation selection and sound dispatch, not rendered
-animation or audible client playback.
+Headless tests verify animation selection, sound dispatch, and the charge-time
+anchor availability result; they do not establish rendered animation, audible
+client playback, room access, or teleportation.
 
 ### Empty shared dimension checkpoint
 

@@ -53,6 +53,8 @@ public final class AnchorBlock extends Block {
             return InteractionResult.FAIL;
         }
         if (record.registered()) {
+            serverLevel.playSound(null, pos, SoundEvents.VAULT_REJECT_REWARDED_PLAYER,
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
             player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.already_registered"));
             return InteractionResult.FAIL;
         }

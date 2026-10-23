@@ -85,8 +85,10 @@ The key stores `dimensionalanchors:registered_key`, containing the anchor UUID;
 the extracted anchor's `dimensionalanchors:anchor_data` retains `registered=true`.
 
 This checkpoint implements identity registration, anvil copying, and a charging
-prototype. It does not
-generate a room, teleport the player, or show anchor availability.
+prototype. It does not generate a room or teleport the player. At charge
+completion it checks that the linked anchor has a registered, placed record;
+when its chunk is already loaded, it also verifies the block and tier. It does
+not load an unloaded anchor chunk for this check.
 An unlinked registered-key item from the creative preview is not a valid key.
 Successful registration plays the vanilla Vault insert-item sound
 (`minecraft:block.vault.insert_item`), selected by the owner after auditioning it.
@@ -112,11 +114,17 @@ is absent. An unlinked preview key cannot be copied.
   button is held. Its existing sprite is unchanged; no new artwork is needed.
 - Beginning use broadcasts `minecraft:block.portal.trigger`, the sound played
   when a player touches a Nether portal, once from the server at the player.
-- At 60 ticks of uninterrupted use, the server shows
-  `Key charged. Teleportation is not implemented yet.` and ends that use cycle.
-  Completion starts a shared 400-tick (20-second) registered-key cooldown
-  per player using vanilla item cooldowns. Copies and keys linked to other
-  anchors cannot bypass it.
+- At 60 ticks of uninterrupted use, the server checks whether the linked anchor
+  is registered and placed in a loaded dimension. If its chunk is loaded, the
+  expected anchor block and tier must also match; an unloaded chunk is not
+  forced to load and relies on the persistent placed record. The completion
+  message reports whether this check passed, but does not imply room access or
+  teleportation is implemented. A passing check plays
+  `minecraft:item.chorus_fruit.teleport`; an unavailable anchor plays
+  `minecraft:block.beacon.deactivate`. When teleportation is implemented, only
+  play the teleport sound after the teleport succeeds. Completion starts a
+  shared 400-tick (20-second) registered-key cooldown per player using vanilla
+  item cooldowns. Copies and keys linked to other anchors cannot bypass it.
 - Releasing before completion cancels without a completion message, resource
   consumption, or cooldown and restores the idle item pose. The already-started
   portal sound is a one-shot, not a looping sound that is explicitly stopped.
@@ -125,7 +133,10 @@ is absent. An unlinked preview key cannot be copied.
   actual travel is implemented, apply it only after successful teleportation.
 - Unlinked creative-preview keys reject use with an explicit message. Blank
   keys do not charge. Both hands and survival/creative are supported.
-- This is a presentation/timing prototype, not travel authorization. It checks
-  for a key reference but does not check anchor availability, allocate a region,
-  load anchor chunks, generate a room, or teleport. Lifecycle validation must
-  be wired before the completion action can become real travel.
+- This is a presentation/timing prototype, not travel authorization. The
+  completion check does not allocate a region, force-load anchor chunks, generate
+  a room, or teleport. Travel must still revalidate lifecycle state and resolve
+  room availability immediately before entering.
+- A blank key used on an already-registered anchor is rejected with
+  `minecraft:block.vault.reject_rewarded_player`; successful registration keeps
+  `minecraft:block.vault.insert_item`.

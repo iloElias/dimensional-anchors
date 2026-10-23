@@ -6,6 +6,8 @@ import java.util.function.Consumer;
 
 import com.mojang.authlib.GameProfile;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -16,24 +18,39 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.PlayLevelSoundEvent;
 
 final class KeyChargingTests {
     static void charging(GameTestHelper helper) {
         var sounds = new ArrayList<PlayLevelSoundEvent.AtPosition>();
+        var availableSounds = new ArrayList<PlayLevelSoundEvent.AtPosition>();
+        var unavailableSounds = new ArrayList<PlayLevelSoundEvent.AtPosition>();
         Consumer<PlayLevelSoundEvent.AtPosition> listener = event -> {
-            if (event.getLevel() == helper.getLevel() && event.getSound() != null
-                    && event.getSound().value() == SoundEvents.PORTAL_TRIGGER) {
-                sounds.add(event);
+            if (event.getLevel() == helper.getLevel() && event.getSound() != null) {
+                var sound = event.getSound().value();
+                if (sound == SoundEvents.PORTAL_TRIGGER) {
+                    sounds.add(event);
+                } else if (sound == SoundEvents.CHORUS_FRUIT_TELEPORT) {
+                    availableSounds.add(event);
+                } else if (sound == SoundEvents.BEACON_DEACTIVATE) {
+                    unavailableSounds.add(event);
+                }
             }
         };
         NeoForge.EVENT_BUS.addListener(listener);
         try {
+            anchorAvailability(helper);
             chargingCases(helper);
-            helper.assertTrue(sounds.size() == 24, "Portal contact sound must play exactly once per started charge");
+            unavailableAnchorFeedback(helper);
+            helper.assertTrue(sounds.size() == 25, "Portal contact sound must play exactly once per started charge");
             helper.assertTrue(sounds.stream().allMatch(sound -> sound.getOriginalVolume() == 0.25F
                     && sound.getOriginalPitch() == 1.0F), "Unexpected portal contact audio settings");
+            helper.assertTrue(availableSounds.size() == 4,
+                    "Successful anchor checks must play one teleport-confirmation sound each");
+            helper.assertTrue(unavailableSounds.size() == 1,
+                    "An unavailable anchor must play one failure sound");
         } finally {
             NeoForge.EVENT_BUS.unregister(listener);
         }
@@ -41,6 +58,11 @@ final class KeyChargingTests {
 
     private static void chargingCases(GameTestHelper helper) {
         var level = helper.getLevel();
+        BlockPos anchorPos = helper.absolutePos(new BlockPos(8, 2, 8));
+        level.setBlockAndUpdate(anchorPos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        UUID anchorId = UUID.randomUUID();
+        AnchorSavedData.get(level).put(AnchorRecord.unplaced(anchorId, AnchorTier.COPPER, true)
+                .placedAt(GlobalPos.of(level.dimension(), anchorPos)));
         for (GameType mode : new GameType[]{GameType.SURVIVAL, GameType.CREATIVE}) {
             for (InteractionHand hand : InteractionHand.values()) {
                 var messages = new ArrayList<Component>();
@@ -64,7 +86,7 @@ final class KeyChargingTests {
                 player.setNoGravity(true);
                 player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1, 2, 1)));
                 var key = DimensionalAnchors.DIMENSIONAL_KEY.get().getDefaultInstance();
-                key.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(UUID.randomUUID()));
+                key.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(anchorId));
                 var original = key.copy();
                 player.setItemInHand(hand, key);
                 var item = key.getItem();
@@ -100,7 +122,7 @@ final class KeyChargingTests {
                 helper.assertTrue(!player.isUsingItem() && messages.size() == 1
                         && messages.getFirst().getContents() instanceof TranslatableContents text
                         && text.getKey().equals("message.dimensionalanchors.key_charge_complete"),
-                        "Exactly one completion message must appear on tick 60, without waiting for release");
+                        "A placed linked anchor must pass the entry check on tick 60");
                 helper.assertTrue(player.getCooldowns().isOnCooldown(key),
                         "Completed charge must apply cooldown");
                 helper.assertTrue(player.getCooldowns().getCooldownPercent(key, 0) == 399.0F / 400.0F,
@@ -154,5 +176,79 @@ final class KeyChargingTests {
                         && !player.isUsingItem(), "Blank key unexpectedly started charging");
             }
         }
+    }
+
+    private static void anchorAvailability(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var saved = AnchorSavedData.get(level);
+        BlockPos pos = helper.absolutePos(new BlockPos(10, 2, 10));
+        UUID id = UUID.randomUUID();
+        var placed = AnchorRecord.unplaced(id, AnchorTier.COPPER, true)
+                .placedAt(GlobalPos.of(level.dimension(), pos));
+
+        saved.put(placed);
+        level.setBlockAndUpdate(pos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        helper.assertTrue(AnchorAvailability.isRegisteredAndPlaced(level, id),
+                "Registered anchor block and saved location should pass the entry check");
+
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        helper.assertTrue(!AnchorAvailability.isRegisteredAndPlaced(level, id),
+                "A stale placed record without its anchor block must fail the entry check");
+
+        level.setBlockAndUpdate(pos, DimensionalAnchors.IRON_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        helper.assertTrue(!AnchorAvailability.isRegisteredAndPlaced(level, id),
+                "An anchor block with a tier different from its record must fail the entry check");
+
+        level.setBlockAndUpdate(pos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        saved.put(AnchorRecord.unplaced(id, AnchorTier.COPPER, true));
+        helper.assertTrue(!AnchorAvailability.isRegisteredAndPlaced(level, id),
+                "An unplaced registered anchor must fail the entry check");
+
+        saved.put(placed.withRegistered(false));
+        helper.assertTrue(!AnchorAvailability.isRegisteredAndPlaced(level, id),
+                "An unregistered anchor must fail the entry check");
+        saved.remove(id);
+        helper.assertTrue(!AnchorAvailability.isRegisteredAndPlaced(level, id),
+                "A missing anchor record must fail the entry check");
+    }
+
+    private static void unavailableAnchorFeedback(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos pos = helper.absolutePos(new BlockPos(12, 2, 12));
+        UUID anchorId = UUID.randomUUID();
+        var staleRecord = AnchorRecord.unplaced(anchorId, AnchorTier.COPPER, true)
+                .placedAt(GlobalPos.of(level.dimension(), pos));
+        AnchorSavedData.get(level).put(staleRecord);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+
+        var messages = new ArrayList<Component>();
+        var player = new Player(level, new GameProfile(UUID.randomUUID(), "missing-anchor-test")) {
+            @Override
+            public boolean isClientAuthoritative() {
+                return false;
+            }
+
+            @Override
+            public void sendOverlayMessage(Component message) {
+                messages.add(message);
+            }
+        };
+        var key = DimensionalAnchors.DIMENSIONAL_KEY.get().getDefaultInstance();
+        key.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(anchorId));
+        player.setNoGravity(true);
+        player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(1, 2, 1)));
+        player.setItemInHand(InteractionHand.MAIN_HAND, key);
+        var position = player.position();
+        helper.assertTrue(key.getItem().use(level, player, InteractionHand.MAIN_HAND).consumesAction(),
+                "The stale linked key should begin its charge");
+        for (int tick = 0; tick < RegisteredKeyItem.CHARGE_TICKS; tick++) {
+            player.tick();
+        }
+        helper.assertTrue(messages.size() == 1
+                && messages.getFirst().getContents() instanceof TranslatableContents text
+                && text.getKey().equals("message.dimensionalanchors.key_anchor_unavailable"),
+                "A stale anchor record must show unavailable feedback when the 60-tick charge completes");
+        helper.assertTrue(player.getCooldowns().isOnCooldown(key) && player.position().equals(position)
+                && player.level() == level, "Unavailable completion should not teleport and must keep prototype cooldown");
     }
 }

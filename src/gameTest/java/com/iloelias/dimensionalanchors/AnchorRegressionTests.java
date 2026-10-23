@@ -22,6 +22,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
@@ -44,6 +45,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.PlayLevelSoundEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
@@ -302,6 +305,7 @@ public final class AnchorRegressionTests {
     private static void keyRegistration(GameTestHelper helper) {
         var level = helper.getLevel();
         var saved = AnchorSavedData.get(level);
+        alreadyRegisteredSound(helper, saved);
         BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
         var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
         for (AnchorTier tier : AnchorTier.values()) {
@@ -390,6 +394,37 @@ public final class AnchorRegressionTests {
         helper.assertTrue(saved.get(id).orElseThrow().equals(record), "Registered-key preview changed registration");
         helper.assertTrue(!preview.has(DimensionalAnchors.REGISTERED_KEY_DATA.get()), "Preview key acquired identity");
         helper.assertTrue(!preview.getItem().isFoil(preview), "Unlinked creative preview key must not glow");
+    }
+
+    private static void alreadyRegisteredSound(GameTestHelper helper, AnchorSavedData saved) {
+        var level = helper.getLevel();
+        BlockPos pos = helper.absolutePos(new BlockPos(20, 2, 20));
+        level.setBlockAndUpdate(pos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        var record = AnchorRecord.unplaced(UUID.randomUUID(), AnchorTier.COPPER, true)
+                .placedAt(GlobalPos.of(level.dimension(), pos));
+        saved.put(record);
+
+        var sounds = new ArrayList<PlayLevelSoundEvent.AtPosition>();
+        Consumer<PlayLevelSoundEvent.AtPosition> listener = event -> {
+            if (event.getLevel() == level && event.getSound() != null
+                    && event.getSound().value() == SoundEvents.VAULT_REJECT_REWARDED_PLAYER) {
+                sounds.add(event);
+            }
+        };
+        NeoForge.EVENT_BUS.addListener(listener);
+        try {
+            var player = helper.makeMockPlayer(GameType.SURVIVAL);
+            var blank = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, blank);
+            var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+            helper.assertTrue(!level.getBlockState(pos)
+                    .useItemOn(blank, level, player, InteractionHand.MAIN_HAND, hit).consumesAction(),
+                    "A second registration attempt must be rejected");
+            helper.assertTrue(sounds.size() == 1,
+                    "Rejected repeated registration must play exactly one rejection sound");
+        } finally {
+            NeoForge.EVENT_BUS.unregister(listener);
+        }
     }
 
     private static void keyRegistrationLifecycle(GameTestHelper helper) {

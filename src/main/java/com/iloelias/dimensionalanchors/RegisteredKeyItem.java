@@ -3,6 +3,7 @@ package com.iloelias.dimensionalanchors;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -59,7 +60,17 @@ public final class RegisteredKeyItem extends Item {
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity user) {
         if (!level.isClientSide() && user instanceof Player player) {
             player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
-            player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.key_charge_complete"));
+            RegisteredKeyData keyData = stack.get(DimensionalAnchors.REGISTERED_KEY_DATA.get());
+            boolean available = level instanceof ServerLevel serverLevel && keyData != null
+                    && AnchorAvailability.isRegisteredAndPlaced(serverLevel, keyData.anchorId());
+            String message = available ? "message.dimensionalanchors.key_charge_complete"
+                    : "message.dimensionalanchors.key_anchor_unavailable";
+            if (level instanceof ServerLevel serverLevel) {
+                serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        available ? SoundEvents.CHORUS_FRUIT_TELEPORT : SoundEvents.BEACON_DEACTIVATE,
+                        SoundSource.PLAYERS, 1.0F, 1.0F);
+            }
+            player.sendOverlayMessage(Component.translatable(message));
         }
         return stack;
     }

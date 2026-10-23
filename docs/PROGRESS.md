@@ -46,9 +46,10 @@ planned room mechanics are implemented.
   explicitly authorized local build/GameTests for it.
 - Linked keys start vanilla bow-use animation and broadcast the Nether portal
   contact sound (`minecraft:block.portal.trigger`) once when use begins.
-- After 60 uninterrupted use ticks, show a translated server-side completion
-  message explaining that teleportation is not implemented, then end the use
-  cycle.
+- After 60 uninterrupted use ticks, check whether the linked anchor is registered
+  and placed; if its chunk is loaded, verify the physical block and tier. Show
+  translated feedback for the result, then end the use cycle. No chunk is forced
+  to load and no teleportation is attempted.
 - Releasing early returns to idle without a completion action. No key/XP
   consumption is applied. Early cancellation has no cooldown; the owner then
   requested a 400-tick vanilla cooldown after placeholder completion, shared
@@ -57,10 +58,19 @@ planned room mechanics are implemented.
 - Added a GameTest for both hands and survival/creative, cancellation at ticks
   0/1/30/59, exact tick-60 completion, sound dispatch, resource/position
   preservation, and invalid-key rejection.
-- This template does not authorize travel, query anchor lifecycle, load remote
-  chunks, allocate rooms, or generate blocks. Real travel and its successful-use
-  result handling remain pending. Owner confirmed the animation matches the
-  intended behavior; sound/cooldown client checks were not separately reported.
+- Extended charging GameTests to pass only when a registered/placed record and
+  matching loaded anchor block/tier are found, and to reject missing records,
+  unregistered/unplaced records, and stale placement records. A stale linked
+  key receives unavailable feedback at tick 60 without teleporting.
+- Added a chorus-fruit teleport sound when the entry check passes and a beacon
+  deactivation sound when it fails. Repeated registration attempts now play the
+  Vault rejection sound; successful registration retains the Vault insertion
+  sound.
+- This remains a diagnostic entry check, not travel authorization. It covers a
+  registered placed anchor and stale/missing data before room generation exists;
+  real travel must still revalidate lifecycle state and handle rooms, destination
+  safety, and teleportation. Owner confirmed the animation matches the intended
+  behavior; sound/cooldown client checks were not separately reported.
 - Cooldown tests cover exact expiry (accounting for vanilla's cooldown tick at
   the end of the completing player tick), copy/other-reference bypass attempts,
   per-player isolation, and reuse after expiry. An initial timing assertion
@@ -282,6 +292,9 @@ not a final implementation of key states or survival availability.
 | Authorized empty-dimension run: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; fourteen mod GameTests and one vanilla test (15 total), including real pocket-dimension loading, End settings comparison, production-resource parity, and three generated air-only chunks; production JAR built |
 | Boundary geometry checkpoint, 2026-10-23 | Added two-block geometry assertions. Generated-block protection awaits room generation so player-placed blocks remain breakable in creative. Not run: local compilation is prohibited by project contribution rules; CI result is pending |
 | `git diff --check` after boundary geometry changes | No whitespace errors reported; Git emitted the existing invalid-attribute warning from `.gitattributes` |
+| Charge-time anchor availability checkpoint, 2026-10-23 | Added GameTest cases for valid registered/placed anchors, missing/unregistered/unplaced records, wrong-tier blocks, stale placement records, and both completion messages. Not run: local compilation is prohibited by project contribution rules; CI result is pending |
+| `git diff --check` and translation JSON parse after availability changes | Passed whitespace check; English translation JSON parsed successfully. Git emitted the existing invalid-attribute warning from `.gitattributes` |
+| Action-sound checkpoint, 2026-10-23 | Added GameTest event assertions for chorus-fruit success, beacon-deactivation failure, and Vault rejection on duplicate registration. Not run: local compilation is prohibited by project contribution rules; CI and in-game audio review are pending |
 | Owner's in-game report: anvil key copies and sound | Matching original/copy UUIDs, shift-click copying, and restored anvil completion sound confirmed |
 | Owner's in-game report, 2026-10-23: key charging animation | Confirmed to behave exactly as requested; no separate sound/cooldown result inferred |
 | Owner's in-game report, 2026-10-23: empty shared dimension | Reported working correctly after the spectator-entry checkpoint; detailed environment, existing-save, and multiplayer checks were not individually reported |
