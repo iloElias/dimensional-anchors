@@ -8,11 +8,14 @@ import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.BlockSnapshot;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 final class RoomGenerationTests {
@@ -110,6 +113,44 @@ final class RoomGenerationTests {
                 DimensionalAnchors.DIMENSIONAL_EXIT_BLOCK.get().defaultBlockState());
     }
 
+    static void placementLimits(GameTestHelper helper) {
+        var pocket = helper.getLevel().getServer().getLevel(RoomGeneration.POCKET);
+        var id = UUID.randomUUID();
+        var geometry = RoomGeneration.prepare(pocket, id, AnchorTier.COPPER);
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var inside = geometry.reference();
+        var outside = inside.above(7);
+        var insideEvent = placementEvent(pocket, inside, player);
+        NeoForge.EVENT_BUS.post(insideEvent);
+        helper.assertTrue(!insideEvent.isCanceled(), "Placement inside a generated room was canceled");
+
+        var outsideEvent = placementEvent(pocket, outside, player);
+        NeoForge.EVENT_BUS.post(outsideEvent);
+        helper.assertTrue(outsideEvent.isCanceled() && pocket.getBlockState(outside).isAir(),
+                "Building outside the existing room was allowed");
+
+        var multiEvent = new BlockEvent.EntityMultiPlaceEvent(java.util.List.of(
+                BlockSnapshot.create(pocket.dimension(), pocket, inside),
+                BlockSnapshot.create(pocket.dimension(), pocket, outside)),
+                pocket.getBlockState(inside.below()), player);
+        NeoForge.EVENT_BUS.post(multiEvent);
+        helper.assertTrue(multiEvent.isCanceled(),
+                "Multi-block placement crossing the room boundary was allowed");
+
+        var goldBoundary = inside.above(7);
+        helper.assertTrue(!RoomGeneration.prepare(pocket, id, AnchorTier.GOLD).equals(geometry)
+                && pocket.getBlockState(goldBoundary).is(DimensionalAnchors.DIMENSIONAL_LIMITER_BLOCK.get()),
+                "A blocked outside placement still prevented the later room upgrade");
+
+        var allocations = RoomAllocationSavedData.get(pocket);
+        allocations.putRoom(id, new RoomGenerationState(AnchorTier.DIAMOND,
+                Optional.of(AnchorTier.GOLD), false));
+        helper.assertTrue(allocations.allowsPlacement(inside) && !allocations.allowsPlacement(goldBoundary)
+                && !allocations.allowsPlacement(new BlockPos(5_000, 64, 5_000)),
+                "Placement was allowed outside the prior completed interior or without a room allocation");
+        allocations.putRoom(id, new RoomGenerationState(AnchorTier.GOLD, Optional.empty(), true));
+    }
+
     static void protection(GameTestHelper helper) {
         var pocket = helper.getLevel().getServer().getLevel(RoomGeneration.POCKET);
         var geometry = RoomGeneration.prepare(pocket, UUID.randomUUID(), AnchorTier.COPPER);
@@ -182,6 +223,12 @@ final class RoomGenerationTests {
             }
         }
         helper.assertTrue(controls == 1, "Room must contain exactly one generated south-wall control");
+    }
+
+    private static BlockEvent.EntityPlaceEvent placementEvent(ServerLevel level, BlockPos position, Player player) {
+        return new BlockEvent.EntityPlaceEvent(
+                BlockSnapshot.create(level.dimension(), level, position),
+                level.getBlockState(position.below()), player);
     }
 
     private static void expectFailure(GameTestHelper helper, Runnable action, String message) {

@@ -39,6 +39,7 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
 
 - Enclose all six sides with persistent, indestructible custom boundary blocks at least two blocks thick. Generated blocks drop no items. Players may break the same block types they placed in creative; generated room boundaries remain protected even in creative.
 - Enforce protection server-side, not through collision or rendering alone. Distinguish generated boundary blocks from player-placed blocks; block identity and dimension alone are insufficient. Commands, non-player block changes, and modded bypasses remain separate protection cases.
+- In the pocket dimension, allow block placement only inside a completed room's usable interior. Reject placements in the void, outside a room, in its generated shell, and in not-yet-generated expansion space; do not discard existing blocks when an upgrade collides with one.
 - Verify manually that player-placed limiter and exit blocks can be broken in creative. Once rooms are generated, verify generated boundary blocks cannot be broken in survival or creative and drop no items. Also investigate explosions, pistons, fluids/fire, pearls/teleports, flight/knockback, ordinary-player commands, and modded bypasses.
 - If a player leaves the permitted interior through unauthorized movement/teleportation, kill that player immediately with:
 

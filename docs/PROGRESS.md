@@ -3,7 +3,7 @@
 **Date:** 2026-10-22  
 **Last updated:** 2026-10-23 (UTC-03:00)\
 **Configured version:** `0.1.0-alpha.1` (release tag: `v0.1.0-alpha.1`)  
-**Stage:** Item descriptions added; authorized build and all 52 GameTests passed. Entry remains disabled; player-transition recovery and both approved entry routes are the next implementation stages.
+**Stage:** In-game feedback recorded; dark UUID tooltips, registered-key recovery, and pocket placement limits implemented, pending permitted validation. Entry remains disabled; player-transition recovery and both approved entry routes are the next implementation stages.
 
 This report distinguishes changes present in the working tree from verified gameplay.
 It does not replace the [approved design](DESIGN_DECISIONS.md) or imply that the
@@ -11,13 +11,51 @@ planned room mechanics are implemented.
 
 ## Continuation handoff, 2026-10-23
 
-- Latest presentation checkpoint: gray localized item descriptions immediately
-  below the name show each anchor tier's usable interior dimensions, blank-key
-  registration instructions, and two separate registered-key travel/return
-  lines. Linked keys also explicitly state that entry is not yet enabled.
-  The anchor UUID is shown only with Shift on identity-bearing anchor/key items;
-  pristine anchors do not allocate an identity and unlinked preview keys report
-  that they are unlinked. No lifecycle lookup or client-only class is needed.
+- Owner's latest in-game feedback: the UUID line should be darker (now
+  `DARK_GRAY`); `/dimensionalanchors recover` should identify the anchor from
+  a registered key (the key remains held; the authoritative anchor goes to a
+  free slot). The earlier command implementation incorrectly expected an
+  anchor item and was corrected. Focused test updates are authored, not run.
+- Owner reported block placement outside the generated room. Pocket placement
+  now allows positions only inside a completed room's usable interior, including
+  checking all affected positions for multi-block placements. New test coverage
+  includes shell/outside/future expansion positions and verifies a subsequent
+  tier expansion. Tests and client validation remain pending.
+- The supplied key-charge error at pocket position `(80, 71, 16)` is the
+  fail-closed preflight in `RoomGeneration.prepare`: the requested expansion
+  needs that position for its new boundary, but a preexisting unexpected block
+  occupies it. Generation correctly avoided overwriting it. This explains why
+  the upgrade was not reflected in the room: the tier is recorded, but key
+  preparation/expansion failed. The newly enforced placement rule prevents
+  recurrence; it does not remove old builds. Inspect and remove/move the
+  obstructing block manually, then charge the registered key again. Item upgrade
+  output records its new tier on pickup; placing it updates the placed record;
+  room geometry changes on subsequent key access, not at crafting time.
+- Owner's latest in-game report: tooltips appeared but took too much space.
+  They now contain only dark-gray `UUID: <uuid>` for identity-bearing anchors
+  and registered keys, always visible without Shift; tooltip GameTests were
+  updated but have not been run for this change. The administrator command now
+  reads the target UUID from a registered key in the main hand, leaves that key
+  untouched, and adds the authoritative anchor to a free slot. The existing
+  UUID form remains. New tests cover this path, pending validation.
+- Owner confirmed room/dimension creation and tier sizes, successful command
+  execution, one expected room expansion with items preserved, and generated
+  borders being unbreakable. Expansion after an upgrade updates the room when
+  the key is used, not at the moment of upgrade. Remaining tiers, restart and
+  interrupted-generation checks remain open (TT-032/033).
+- The report that additional barrier blocks were breakable needs the block
+  origin distinguished: generated boundary blocks are protected; player-placed
+  utility blocks are intentionally breakable in creative (TT-034). Retest if
+  "additional" referred to generated boundary positions.
+- The owner also teleported outside a room by command, switched to Survival,
+  and did not die; falling into the void caused death. Administrative
+  teleportation does not create a recorded room session, while movement
+  enforcement only observes valid recorded occupants. Since normal entry is
+  still disabled, this test does not establish an enforcement failure; a
+  valid-session in-game check is blocked until entry is implemented (TT-077).
+- Previous presentation checkpoint: tooltips included dimensions and
+  instructions, with UUID visible only while holding Shift. The latest owner
+  request replaced those lines with a dark-gray, always-visible UUID only.
 - Validation command:
   `JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
   Result: `BUILD SUCCESSFUL in 33s`, all 52 required tests passed (51 mod and one

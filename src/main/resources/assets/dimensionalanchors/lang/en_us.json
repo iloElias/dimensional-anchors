@@ -42,15 +42,11 @@
   "death.attack.dimensionalanchors.boundary": "%1$s tried to access places beyond imagination",
   "message.dimensionalanchors.anchor_placement_error": "Cannot place this anchor: its identity is already placed, its tier is outdated, or its saved data is inconsistent. Check the server log.",
   "commands.dimensionalanchors.recover.success": "Recovered anchor %1$s at tier %2$s. Place it to restore access; existing occupants were not changed.",
+  "commands.dimensionalanchors.recover.hold_key": "Hold exactly one dimensional key in your main hand to recover its anchor.",
+  "commands.dimensionalanchors.recover.hold_registered_key": "The held key is not registered to an anchor.",
   "commands.dimensionalanchors.recover.unknown": "Cannot recover %1$s: no saved anchor identity exists.",
   "commands.dimensionalanchors.recover.placed": "Cannot recover %1$s: an anchor block still occupies its recorded location.",
   "commands.dimensionalanchors.recover.unresolved": "Cannot recover %1$s: its saved identity or location cannot be verified. Check the server log.",
   "commands.dimensionalanchors.recover.inventory_full": "Cannot recover %1$s: free an inventory slot first. No item was dropped.",
-  "tooltip.dimensionalanchors.anchor_space": "Provides a %1$sx%2$sx%3$s dimensional space.",
-  "tooltip.dimensionalanchors.blank_key": "Use on an unregistered anchor to link this key.",
-  "tooltip.dimensionalanchors.key_travel": "Hold use for 3 seconds to travel.",
-  "tooltip.dimensionalanchors.key_return": "Use inside its linked room to return.",
-  "tooltip.dimensionalanchors.entry_disabled": "Room entry is not enabled yet.",
-  "tooltip.dimensionalanchors.unlinked_key": "This key is not linked to an anchor.",
-  "tooltip.dimensionalanchors.anchor_uuid": "Anchor UUID: %1$s"
+  "tooltip.dimensionalanchors.anchor_uuid": "UUID: %1$s"
 }

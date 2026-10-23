@@ -50,6 +50,7 @@ public final class RoomAllocationSavedData extends SavedData {
 
     private final Map<UUID, Integer> slots;
     private final Map<UUID, RoomGenerationState> rooms;
+    private final Map<Integer, UUID> roomIdsBySlot;
 
     private RoomAllocationSavedData() {
         this(Map.of(), Map.of());
@@ -58,6 +59,8 @@ public final class RoomAllocationSavedData extends SavedData {
     private RoomAllocationSavedData(Map<UUID, Integer> slots, Map<UUID, RoomGenerationState> rooms) {
         this.slots = new HashMap<>(slots);
         this.rooms = new HashMap<>(rooms);
+        this.roomIdsBySlot = new HashMap<>();
+        this.slots.forEach((id, slot) -> roomIdsBySlot.put(slot, id));
     }
 
     public static RoomAllocationSavedData get(ServerLevel level) {
@@ -85,6 +88,7 @@ public final class RoomAllocationSavedData extends SavedData {
         }
         int slot = slots.size();
         slots.put(anchorId, slot);
+        roomIdsBySlot.put(slot, anchorId);
         setDirty();
         return slot;
     }
@@ -106,18 +110,28 @@ public final class RoomAllocationSavedData extends SavedData {
     }
 
     boolean protects(BlockPos position) {
-        int x = Math.floorDiv(position.getX(), RoomGeometry.CELL_SIZE);
-        int z = Math.floorDiv(position.getZ(), RoomGeometry.CELL_SIZE);
-        if (x < 0 || x >= RoomGeometry.GRID_WIDTH || z < 0 || z >= RoomGeometry.GRID_WIDTH) {
+        int slot = slotAt(position);
+        UUID id = slot < 0 ? null : roomIdsBySlot.get(slot);
+        RoomGenerationState state = id == null ? null : rooms.get(id);
+        return state != null && state.protects(slot, position);
+    }
+
+    boolean allowsPlacement(BlockPos position) {
+        int slot = slotAt(position);
+        UUID id = slot < 0 ? null : roomIdsBySlot.get(slot);
+        RoomGenerationState state = id == null ? null : rooms.get(id);
+        if (state == null) {
             return false;
         }
-        int slot = z * RoomGeometry.GRID_WIDTH + x;
-        for (var entry : rooms.entrySet()) {
-            if (slots.get(entry.getKey()) == slot && entry.getValue().protects(slot, position)) {
-                return true;
-            }
-        }
-        return false;
+        AnchorTier accessibleTier = state.complete() ? state.tier() : state.previousTier().orElse(null);
+        return accessibleTier != null && new RoomGeometry(slot, accessibleTier).interior().isInside(position);
+    }
+
+    private static int slotAt(BlockPos position) {
+        int x = Math.floorDiv(position.getX(), RoomGeometry.CELL_SIZE);
+        int z = Math.floorDiv(position.getZ(), RoomGeometry.CELL_SIZE);
+        return x < 0 || x >= RoomGeometry.GRID_WIDTH || z < 0 || z >= RoomGeometry.GRID_WIDTH
+                ? -1 : z * RoomGeometry.GRID_WIDTH + x;
     }
 
     private static DataResult<Map<UUID, Integer>> validateSlots(Map<UUID, Integer> slots) {

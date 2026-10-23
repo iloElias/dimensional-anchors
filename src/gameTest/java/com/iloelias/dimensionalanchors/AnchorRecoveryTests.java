@@ -105,6 +105,47 @@ final class AnchorRecoveryTests {
                 "Full inventory modified anchor data or dropped a recovery item");
     }
 
+    static void recoverFromHeldKey(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var player = helper.makeMockServerPlayerInLevel();
+        var source = admin(player);
+        player.getInventory().clearContent();
+        UUID id = UUID.randomUUID();
+        AnchorSavedData.get(level).put(AnchorRecord.unplaced(id, AnchorTier.NETHERITE, true));
+        var held = new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get());
+        held.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(id));
+        player.setItemInHand(InteractionHand.MAIN_HAND, held);
+
+        helper.assertTrue(execute(source) == 1, "Hand recovery command failed");
+        var recovered = player.getInventory().getItem(1);
+        helper.assertTrue(recovered.is(DimensionalAnchors.NETHERITE_DIMENSIONAL_ANCHOR_ITEM.get())
+                && recovered.getCount() == 1
+                && new AnchorItemData(id, AnchorTier.NETHERITE, true)
+                        .equals(recovered.get(DimensionalAnchors.ANCHOR_ITEM_DATA.get()))
+                && player.getItemInHand(InteractionHand.MAIN_HAND).equals(held),
+                "Key recovery did not preserve the key and add one authoritative anchor");
+
+        UUID invalidId = UUID.randomUUID();
+        var unlinked = new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, unlinked);
+        helper.assertTrue(execute(source) == 0
+                && player.getItemInHand(InteractionHand.MAIN_HAND) == unlinked
+                && AnchorSavedData.get(level).get(invalidId).isEmpty(),
+                "Key recovery accepted or changed an unlinked key");
+
+        var unrelated = new ItemStack(Items.STONE);
+        player.setItemInHand(InteractionHand.MAIN_HAND, unrelated);
+        helper.assertTrue(execute(source) == 0 && player.getItemInHand(InteractionHand.MAIN_HAND) == unrelated,
+                "Key recovery accepted or changed a non-key item");
+
+        var stacked = new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get(), 2);
+        stacked.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(id));
+        player.setItemInHand(InteractionHand.MAIN_HAND, stacked);
+        helper.assertTrue(execute(source) == 0
+                && player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 2,
+                "Key recovery accepted a key stack that could duplicate an identity");
+    }
+
     static void placedAndConflicting(GameTestHelper helper) {
         var level = helper.getLevel();
         var pocket = level.getServer().getLevel(RoomGeneration.POCKET);
@@ -292,6 +333,14 @@ final class AnchorRecoveryTests {
             return source.getServer().getCommands().getDispatcher().execute("dimensionalanchors recover " + id, source);
         } catch (CommandSyntaxException exception) {
             throw new IllegalStateException("Recovery command unexpectedly failed to execute", exception);
+        }
+    }
+
+    private static int execute(CommandSourceStack source) {
+        try {
+            return source.getServer().getCommands().getDispatcher().execute("dimensionalanchors recover", source);
+        } catch (CommandSyntaxException exception) {
+            throw new IllegalStateException("Hand recovery command unexpectedly failed to execute", exception);
         }
     }
 

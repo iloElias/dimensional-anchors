@@ -61,6 +61,8 @@ public final class AnchorRegressionTests {
                 100, 0, true), AnchorRecoveryTests::recoverTiers);
         register(event, "recover_command_failures", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRecoveryTests::permissionsAndFailures);
+        register(event, "recover_from_registered_key", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::recoverFromHeldKey);
         register(event, "recover_placed_conflicts", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRecoveryTests::placedAndConflicting);
         register(event, "recover_unloaded_record", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
@@ -153,6 +155,8 @@ public final class AnchorRegressionTests {
                 100, 0, true), PocketDimensionTests::dimension);
         register(event, "room_generation", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), RoomGenerationTests::generation);
+        register(event, "room_placement_limits", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomGenerationTests::placementLimits);
         register(event, "room_generation_recovery", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), RoomGenerationTests::recovery);
         register(event, "room_boundary_protection", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),

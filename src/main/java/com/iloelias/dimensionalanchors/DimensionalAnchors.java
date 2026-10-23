@@ -130,6 +130,7 @@ public class DimensionalAnchors {
         NeoForge.EVENT_BUS.addListener(KeyCopying::update);
         NeoForge.EVENT_BUS.addListener(KeyCopying::take);
         NeoForge.EVENT_BUS.addListener(RoomBoundaryProtection::onBreak);
+        NeoForge.EVENT_BUS.addListener(RoomBoundaryProtection::onPlace);
         NeoForge.EVENT_BUS.addListener(PlayerRoomReconciliation::onLogin);
         NeoForge.EVENT_BUS.addListener(PlayerRoomReconciliation::onRespawn);
         NeoForge.EVENT_BUS.addListener(RoomMovementEnforcement::onTick);
