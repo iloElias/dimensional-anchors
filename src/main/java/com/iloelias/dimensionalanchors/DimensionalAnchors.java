@@ -56,7 +56,8 @@ public class DimensionalAnchors {
     public static final DeferredBlock<Block> DIMENSIONAL_LIMITER_BLOCK =
             registerUtilityBlock("dimensional_limiter_block");
     public static final DeferredBlock<Block> DIMENSIONAL_EXIT_BLOCK =
-            registerUtilityBlock("dimensional_exit_block");
+            BLOCKS.register("dimensional_exit_block",
+                    () -> new DimensionalExitBlock(utilityBlockProperties("dimensional_exit_block")));
 
     public static final DeferredItem<BlockItem> COPPER_DIMENSIONAL_ANCHOR_ITEM =
             registerAnchorItem("copper_dimensional_anchor", COPPER_DIMENSIONAL_ANCHOR);
@@ -129,6 +130,11 @@ public class DimensionalAnchors {
         NeoForge.EVENT_BUS.addListener(KeyCopying::update);
         NeoForge.EVENT_BUS.addListener(KeyCopying::take);
         NeoForge.EVENT_BUS.addListener(RoomBoundaryProtection::onBreak);
+        NeoForge.EVENT_BUS.addListener(PlayerRoomReconciliation::onLogin);
+        NeoForge.EVENT_BUS.addListener(PlayerRoomReconciliation::onRespawn);
+        NeoForge.EVENT_BUS.addListener(RoomMovementEnforcement::onTick);
+        NeoForge.EVENT_BUS.addListener(RoomMovementEnforcement::onLogout);
+        NeoForge.EVENT_BUS.addListener(AnchorRecoveryCommand::register);
     }
 
     private static DeferredBlock<Block> registerAnchor(
@@ -157,13 +163,17 @@ public class DimensionalAnchors {
     }
 
     private static DeferredBlock<Block> registerUtilityBlock(String name) {
-        return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
+        return BLOCKS.register(name, () -> new Block(utilityBlockProperties(name)));
+    }
+
+    private static BlockBehaviour.Properties utilityBlockProperties(String name) {
+        return BlockBehaviour.Properties.of()
                 .setId(blockKey(name))
                 .mapColor(MapColor.STONE)
                 .strength(Blocks.BEDROCK.defaultDestroyTime(), Blocks.BEDROCK.getExplosionResistance())
                 .noLootTable()
                 .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
-                .sound(Blocks.STONE.defaultBlockState().getSoundType())));
+                .sound(Blocks.STONE.defaultBlockState().getSoundType());
     }
 
     private static ResourceKey<Block> blockKey(String name) {

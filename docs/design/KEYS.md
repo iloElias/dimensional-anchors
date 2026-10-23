@@ -21,6 +21,10 @@
 - Successful key teleportation applies a 20-second cooldown: 400 game ticks at the nominal rate.
 - Reuse the vanilla Ender Pearl cooldown system, with a shared registered-key cooldown group per player so switching copies cannot bypass it.
 - Entry is remote; proximity to the anchor is unnecessary, but the anchor must be placed and activated.
+- Alternatively, interacting with the matching placed anchor while holding its
+  registered key is approved. That route captures a safe return in front of the
+  anchor; charged remote entry captures the player's exterior use position.
+  Neither entry route is enabled yet; see [travel](TRAVEL.md).
 - Remote access works with the anchor's chunk unloaded, without permanent chunk loading.
 - A different room's key may be used inside a room. The current room's key instead triggers normal exit, with the same charge/cooldown behavior.
 - Waystones crystals are a behavioral reference, not a dependency or a verified API choice.

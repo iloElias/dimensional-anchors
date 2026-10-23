@@ -6,7 +6,10 @@ The approved decisions previously collected in this file are now organized by to
 
 - The topic documents below supersede conflicting requirements and open questions in the [original design specification](DESIGN.md).
 - Requirements not superseded remain applicable. The original specification is retained as a historical baseline, not a reason to reintroduce replaced behavior.
-- In particular, key-based authorization replaces ownership/invitations; keys alone provide entry; the floor stays fixed; and the approved recipes replace the original recipe proposals.
+- In particular, key-based authorization replaces ownership/invitations;
+  charged remote use and matching-anchor interaction while holding a registered
+  key are the approved entry routes; the floor stays fixed; and the approved
+  recipes replace the original recipe proposals.
 - Recommendations, conditional features, and unresolved technical choices are not approved gameplay.
 - Documentation approval is not approval to implement or run the game. No implementation or passing-test status is implied.
 - Project-facing documentation remains in English.

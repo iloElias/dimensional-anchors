@@ -85,8 +85,7 @@ public final class AnchorBlock extends Block {
             return;
         }
 
-        AnchorSavedData savedData = AnchorSavedData.get(serverLevel);
-        AnchorRecord existing = savedData.get(itemData.anchorId()).orElse(null);
+        AnchorRecord existing = AnchorIdentity.find(serverLevel, itemData.anchorId()).orElse(null);
         if (existing != null && existing.placed()) {
             DimensionalAnchors.LOGGER.error("Anchor is already placed: {}", itemData.anchorId());
             return;
@@ -94,7 +93,7 @@ public final class AnchorBlock extends Block {
         AnchorRecord record = existing == null
                 ? AnchorRecord.unplaced(itemData.anchorId(), tier, itemData.registered())
                 : existing.withTier(tier);
-        savedData.put(record.placedAt(GlobalPos.of(serverLevel.dimension(), pos)));
+        AnchorIdentity.store(serverLevel, record.placedAt(GlobalPos.of(serverLevel.dimension(), pos)));
     }
 
     @Override

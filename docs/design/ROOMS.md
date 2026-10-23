@@ -52,6 +52,38 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
 - Normal wall movement must not cause false deaths. Process legitimate exits and internal mod teleports correctly before violation enforcement.
 - Cover login, respawn, invalid coordinates, and client position manipulation without recursive or repeated death events.
 
+## Implemented movement enforcement
+
+- Server post-player ticks observe the recorded session's completed allocated
+  room. Establish a baseline only with the player's finite full bounding box
+  inside its usable interior. Check that box against all six faces with a
+  `1e-5` block collision-rounding tolerance, using the current pose dimensions.
+  No anchor-availability lookup, room scan, generation or chunk ticket is needed.
+- A previously observed occupant leaving that interior or dimension receives
+  one vanilla generic-kill damage attempt. The localized death message has the
+  approved English fallback. Vanilla death hooks, inventory rules and drops
+  remain in control; recursive/canceled death cannot produce a damage loop.
+  If the player survives a hook, report the unresolved violation explicitly.
+- Vanilla client/dimension loading rejects damage. Retain the observation
+  through that immunity and check again once ready, before marking an attempt.
+  Enforcement is tick-based, not a packet-by-packet or teleport-event veto.
+- Active mod travel is exempt. Confirmed exit clears monitoring with the matching
+  session. An unconfirmed/partial exit explicitly suspends punitive checks until
+  reconciliation; it does not authorize entry or implement recovery. An invalid
+  exit request does not grant an exemption.
+- Initial ambiguous/outside occupancy, missing/incomplete allocation, and invalid
+  login states warn without automatic killing, movement or data deletion. A
+  suspended observation does not automatically rearm when the player walks back
+  inside. Valid login/pocket-respawn reconciliation establishes a new baseline.
+- Observations are transient, server-scoped and bound to player/session object
+  identity. Logout clears only that object's observation; delayed old-player
+  events cannot erase a respawn replacement's baseline. Session removal clears
+  its observation. Anchor absence never causes punishment or expulsion.
+- Eight movement GameTests and the exit/reconciliation regressions passed in the
+  44-test checkpoint. Real movement packets, pearls, flight/knockback, expansion/
+  restart timing and arbitrary mod hooks still require the checks in
+  [TO_TEST](../TO_TEST.md). Entry and room-to-room travel remain disabled.
+
 ## Implemented geometry and generation
 
 - `RoomGeometry` defines usable cubic interiors of 3, 5, 7, 10, and 16 blocks.
@@ -67,8 +99,9 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
   interior Z. The single control position is one block south and one block above
   those feet, in the inner layer of the south wall. Future entry faces north.
 - These are default coordinates, not proof of a safe landing after construction.
-  Safe landing and functional exit controls remain pending. No teleportation
-  uses these coordinates yet.
+  Safe landing resolution and the keyless exit control are implemented, but
+  ordinary player entry remains disabled. Manual landing/control checks remain
+  necessary.
 
 - Temporarily, a full charge with an available linked anchor prepares its room
   without moving the player, as approved by the owner. An upgraded anchor expands
@@ -87,8 +120,9 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
 - The same utility block types placed in an interior, ungenerated region, or
   another dimension are not protected by this listener. Both utility types have
   no loot table, bedrock hardness/resistance, and blocked piston movement.
-- Commands/modded bypasses and unauthorized player movement are not covered by
-  this checkpoint. A completed boundary changed through such a bypass fails
+- Commands/modded block-change bypasses remain separate protection cases.
+  Observed player departures are covered by movement enforcement above.
+  A completed boundary changed through a block bypass fails
   verification explicitly; generation does not silently recreate it.
 - Normal persistence and pending-state recovery have regression tests awaiting CI.
   Saved data and chunks do not form an atomic crash-safe transaction.

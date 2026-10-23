@@ -19,6 +19,41 @@ import net.minecraft.world.level.storage.SavedDataStorage;
 import net.minecraft.world.phys.Vec3;
 
 final class PlayerRoomTests {
+    static void travelSnapshots(GameTestHelper helper) {
+        var data = emptyData();
+        UUID player = UUID.randomUUID();
+        UUID other = UUID.randomUUID();
+        UUID room = UUID.randomUUID();
+        var exterior = new ExteriorReturn(Level.OVERWORLD, new Vec3(2.5, 70, 4.5), 0, 0);
+        data.enter(player, room, exterior);
+        var original = data.find(player).orElseThrow();
+        data.setDirty(false);
+        helper.assertTrue(data.beginTravel(player) && !data.beginTravel(player) && data.beginTravel(other),
+                "Travel guard did not isolate players or reject reentry");
+        helper.assertTrue(!data.isDirty(), "Transient travel guard dirtied saved data");
+        var restored = reload(data);
+        helper.assertTrue(restored.beginTravel(player), "Travel guard was serialized across reload");
+        restored.endTravel(player);
+        data.endTravel(player);
+        data.endTravel(other);
+        helper.assertTrue(data.beginTravel(player), "Travel guard did not release");
+        data.endTravel(player);
+
+        expectStateFailure(helper, () -> data.completeExitIfUnchanged(player,
+                new PlayerRoomSession(room, exterior)));
+        helper.assertTrue(data.find(player).orElseThrow() == original && !data.isDirty(),
+                "A value-equal snapshot was mistaken for the captured session");
+        data.changeRoom(player, UUID.randomUUID());
+        data.changeRoom(player, room);
+        data.setDirty(false);
+        expectStateFailure(helper, () -> data.completeExitIfUnchanged(player, original));
+        helper.assertTrue(!data.isDirty() && data.find(player).orElseThrow().equals(original),
+                "ABA session check changed or removed the replacement");
+        data.completeExitIfUnchanged(player, data.find(player).orElseThrow());
+        helper.assertTrue(data.find(player).isEmpty() && data.isDirty(),
+                "Matching captured-session completion failed");
+    }
+
     static void lifecycle(GameTestHelper helper) {
         var data = emptyData();
         UUID player = UUID.randomUUID();

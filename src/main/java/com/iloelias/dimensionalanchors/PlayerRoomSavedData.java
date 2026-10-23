@@ -2,9 +2,11 @@ package com.iloelias.dimensionalanchors;
 
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mojang.serialization.Codec;
@@ -31,6 +33,8 @@ public final class PlayerRoomSavedData extends SavedData {
             PlayerRoomSavedData::new, CODEC);
 
     private final Map<UUID, PlayerRoomSession> sessions;
+    private final Set<UUID> activeTravel = new HashSet<>();
+    private final RoomMovementEnforcement movement = new RoomMovementEnforcement();
 
     private PlayerRoomSavedData() {
         this(Map.of());
@@ -77,7 +81,34 @@ public final class PlayerRoomSavedData extends SavedData {
             throw new IllegalStateException("Player changed rooms before exit completion: " + playerId);
         }
         sessions.remove(playerId);
+        movement.forget(playerId);
         setDirty();
+    }
+
+    void completeExitIfUnchanged(UUID playerId, PlayerRoomSession expectedSession) {
+        // Identity rejects a session replaced during hooks, even with identical saved values.
+        if (requireSession(playerId) != Objects.requireNonNull(expectedSession, "expectedSession")) {
+            throw new IllegalStateException("Player session changed during travel: " + playerId);
+        }
+        sessions.remove(playerId);
+        movement.forget(playerId);
+        setDirty();
+    }
+
+    boolean beginTravel(UUID playerId) {
+        return activeTravel.add(Objects.requireNonNull(playerId, "playerId"));
+    }
+
+    boolean isTravelActive(UUID playerId) {
+        return activeTravel.contains(playerId);
+    }
+
+    RoomMovementEnforcement movement() {
+        return movement;
+    }
+
+    void endTravel(UUID playerId) {
+        activeTravel.remove(playerId);
     }
 
     private PlayerRoomSession requireSession(UUID playerId) {

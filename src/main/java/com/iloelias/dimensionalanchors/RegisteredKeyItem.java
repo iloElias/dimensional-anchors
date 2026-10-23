@@ -59,8 +59,18 @@ public final class RegisteredKeyItem extends Item {
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity user) {
         if (!level.isClientSide() && user instanceof Player player) {
-            player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
             RegisteredKeyData keyData = stack.get(DimensionalAnchors.REGISTERED_KEY_DATA.get());
+            if (level instanceof ServerLevel serverLevel && keyData != null
+                    && PlayerRoomSavedData.get(serverLevel).find(player.getUUID())
+                            .filter(session -> session.anchorId().equals(keyData.anchorId())).isPresent()) {
+                if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                        && PlayerTravelService.exitWithKey(serverPlayer, keyData.anchorId())) {
+                    player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
+                }
+                return stack;
+            }
+
+            player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
             boolean available = false;
             String message = "message.dimensionalanchors.key_anchor_unavailable";
             if (level instanceof ServerLevel serverLevel) {

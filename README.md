@@ -45,6 +45,38 @@ Gradle names the JAR using the mod ID and version, for example
 description is generated automatically; neither needs to be entered manually.
 Download published builds from the repository's Releases page.
 
+### Authorized local test installation
+
+When a local build is explicitly authorized, close Minecraft and run:
+
+```sh
+bash ./build-test.sh
+```
+
+The script builds with one Gradle worker, reads the mod ID/version from
+`gradle.properties`, and installs the production JAR into
+`~/Documents/curseforge/minecraft/Instances/DA Mod Test/mods/`.
+Older versions of this mod are removed only after the new JAR is copied,
+verified, and installed. Other mods are left untouched. Java must be configured
+for Gradle; set `JAVA_HOME` if needed. This does not launch Minecraft or run
+GameTests, and limiting workers does not guarantee a particular memory ceiling.
+
+## Administrative anchor recovery
+
+In builds containing the recovery checkpoint, an administrator player can run:
+
+```text
+/dimensionalanchors recover <anchor-uuid>
+```
+
+The command gives one anchor of the recorded tier with the same UUID and
+registration. It requires a free inventory slot and refuses unknown,
+inconsistent or still-placed identities. Place the recovered block to restore
+anchor availability; the command never moves occupants or recovers lost keys.
+Gameplay entry remains disabled pending transition/recovery integration.
+See [anchor recovery](docs/design/ANCHORS.md#administrative-anchor-recovery)
+and [validation](docs/TO_TEST.md) for scope and limitations.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull/merge request. Use English for project-facing documentation, comments, and UI strings. Do not resolve [open design questions](docs/design/OPEN_QUESTIONS.md) without explicit approval.

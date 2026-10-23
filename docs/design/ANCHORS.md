@@ -9,7 +9,10 @@
 - Independently created anchors must have distinct room identities, independent of player UUIDs.
 - A newly crafted anchor is inactive. Any player may register its first blank key by interacting with it. Registration happens once per anchor identity.
 - Registration does not generate the physical room; generation occurs on first access.
-- Interaction with the anchor block never provides entry. Entry requires [key use](KEYS.md).
+- Entry requires a valid registered key: charged remote [key use](KEYS.md), or
+  interaction with its matching anchor while holding the key. Anchor-interaction
+  entry was approved on 2026-10-23 and supersedes the earlier prohibition; both
+  entry paths remain gated pending complete transition/recovery integration.
 - Any player may register, mine, or destroy the anchor; those actions have no ownership or key-possession restriction.
 - Room identity, registration, contents, spatial allocation, and existing keys survive legitimate upgrades and relocation. Downgrades are forbidden.
 
@@ -33,7 +36,36 @@
 - Disconnected occupants are not killed or relocated by room preservation. They may resume their existing room session and leave, but cannot initiate a new entry while the room is unavailable.
 - There is no destruction death message, room cleanup, or region reclamation for anchor-block destruction.
 - Destruction of the room itself is out of scope under this simplified lifecycle. Do not implement cleanup that deletes its contents or makes the region available to another anchor.
-- Recovery/reactivation after permanent loss of the anchor block remains undefined. Keys do not bypass the unavailable state.
+- Administrative item recovery is defined below. Keys do not bypass the
+  unavailable state; the recovered block must be placed before new entry.
+
+## Administrative anchor recovery
+
+- `/dimensionalanchors recover <uuid>` is the only mechanism for recovering a
+  lost anchor block/item. It requires the target version's administrator command
+  permission and a player executor; the console has no inventory recipient.
+- Give exactly one anchor item of the highest authoritatively recorded tier,
+  preserving the anchor/room UUID and registration in `dimensionalanchors:anchor_data`
+  (persisted item components). Do not create a room, issue a key, reset
+  registration, move an occupant, erase contents, or change a return destination.
+- Resolve existing records across server dimensions. Refuse unknown UUIDs,
+  conflicting/malformed records or unreadable authoritative data. Verify a
+  recorded placed location by loading that chunk before treating it as absent;
+  if an anchor block is still present there, refuse recovery.
+- Require a free main-inventory slot. A full inventory fails without dropping an
+  item or clearing a stale placed record. Successful recovery marks the identity
+  unplaced; only subsequent placement restores normal key availability.
+- Repeated recovery can leave spare items, since inventories/dropped items
+  cannot be exhaustively searched. Placement rejects a UUID already placed in
+  any dimension and rejects obsolete lower-tier items. Relocation consolidates
+  the authoritative record in the new dimension without losing registration.
+- Completed crafting/smithing upgrades now record their tier before placement;
+  previews do not. Recovery cannot reconstruct an unrecorded historical upgrade
+  lost before this tracking existed. It restores recorded metadata, not unknown
+  item state or custom names.
+- The command and cross-dimension placement safeguards are implemented; see
+  [verification](VERIFICATION.md) and [TO_TEST](../TO_TEST.md) for actual evidence.
+  This does not implement player-session recovery or enable gameplay entry.
 
 ## Explosion resistance
 
@@ -58,6 +90,6 @@ This specifies blast resistance only, not mining hardness or dropped-item immuni
 | All keys lost | Preserved | Unavailable; no replacement/reset | Keyless south-wall exit remains available |
 | Anchor extracted or surviving explosion drop | Preserved | New entry suspended | Existing players and non-player entities remain; players can exit |
 | Anchor replaced/recovered | Same identity and contents | Existing keys work again | Existing room sessions continue |
-| Anchor block/item destroyed | Preserved; region not reclaimed | Unavailable pending an undefined recovery process | Current and disconnected occupants are not killed or teleported; they can leave |
+| Anchor block/item destroyed | Preserved; region not reclaimed | Unavailable until an administrator recovers the item and it is placed | Current and disconnected occupants are not killed or teleported; they can leave |
 
 Technical questions about recovery, removal hooks, and persistence are tracked in [open questions](OPEN_QUESTIONS.md).

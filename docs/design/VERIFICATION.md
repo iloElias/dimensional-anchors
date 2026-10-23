@@ -67,6 +67,18 @@ These requirements consolidate the original and subsequent plans. They are not c
 
 Do not claim compatibility or a passed check without executing and inspecting the relevant evidence. Documentation organization alone requires no game build.
 
+## Deferred-validation workflow, 2026-10-23
+
+The owner initially deferred builds/tests while memory was constrained, then
+reauthorized local build and test execution on 2026-10-23 after artifact caching.
+Use one Gradle worker and no parallel execution.
+[TO_TEST](../TO_TEST.md) is the central tabular backlog:
+add every changed behavior, failure path, regression risk, and pending automated
+or manual check in the same change. Keep unimplemented prerequisites distinct
+from implemented-but-unverified behavior. Record execution evidence only when
+the owner requests checks; source inspection and written tests are not passes.
+This workflow does not waive unresolved design decisions or entry safety gates.
+
 ## Implemented anchor regression tests
 
 The focused headless suite is in
@@ -308,9 +320,10 @@ Manual checkpoint in a disposable world, after CI passes:
    Test explosions and pistons against boundaries. Commands and modded bypasses
    are separate cases, not evidence that ordinary breaking is unprotected.
 
-The control does not exit yet. Keep a command-based administrator return path;
-do not enable ordinary player entry. Safe landing, return-session persistence,
-movement enforcement, and hard-crash transactional recovery are not validated.
+The control now exits only with an existing recorded session. Command-based
+entry does not create one; keep an administrator return path and do not enable
+ordinary player entry. Later checkpoints below cover safe landing, sessions,
+exit and observed movement. Hard-crash transactional recovery is not established.
 
 ### Player room session-data checkpoint
 
@@ -353,3 +366,170 @@ Tests call the resolver without teleporting. They do not establish network
 transition correctness, live reconnect recovery, all modded hazard behavior, or
 the player's eventual failure notification. Temporary world-spawn/border changes
 in tests are restored. The game world used is the disposable GameTest world.
+
+### Server-authoritative exit checkpoint
+
+[TravelServiceTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/TravelServiceTests.java)
+checks that the generated control exits without a key, restores the exact safe
+exterior position and orientation, and removes only the player's matching
+session after teleport success. A rejected server teleport must leave the player
+inside, retain the session, and show explicit failure feedback.
+
+The hardening additions include four more GameTests:
+
+- `canceled_reentrant_exit`: cancel real NeoForge dimension travel, reject nested
+  key/control exits, preserve session and motion on cancellation, then retry
+  successfully with zero velocity/fall distance.
+- `exceptional_exit_teleports`: controlled player overrides simulate exceptions
+  before/after movement, false success, rejection after movement, redirection,
+  wrong rotation/dimension, and destination obstruction introduced during travel.
+  No normal success or session removal is allowed; the guard must release.
+- `replaced_exit_sessions`: preserve another occupant and changed/recreated/
+  removed sessions, including a room change away and back to identical values.
+  Cleanup conflicts have explicit feedback without overwriting hook changes.
+- `player_travel_snapshots`: guard isolation/release and non-persistence;
+  captured-session identity, not just equal room/return values, authorizes removal.
+
+The controlled overrides are not proof of every third-party hook or crash
+outcome. Partial movement is diagnosed without a second teleport; recovery after
+such failures remains part of pending lifecycle reconciliation.
+
+Two additional tests cover `arrival_validation_limits` (exact/inside/outside
+position tolerance, total-distance rather than per-axis tolerance, inclusive
+rotation endpoints and neighboring floats, wrapped yaw, non-finite coordinates/
+rotation, dead/removed arrivals) and `travel_thread_liveness` (off-thread
+rejection before session/position changes, dead/removed travel, guard release).
+Non-finite rotations are emulated through test getters because vanilla setters
+discard them. The initial exact-arrival fixture omitted initialization of the
+constructor's yaw; it was corrected before the successful rerun.
+
+Authorized final command on 2026-10-23:
+`JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+Result: build passed, all 32 GameTests passed (31 mod, one vanilla). Expected
+exception/corrupt-store diagnostics are exercised rejection paths, not failing
+tests. This does not establish live client synchronization, arbitrary mod hooks,
+manual installation or remote CI; see [TO_TEST](../TO_TEST.md).
+
+Key charging still does not enter a room or create a session. Only a key matching
+the currently recorded room can request its normal charged exit. Room-to-room
+travel remains disabled; the later movement checkpoint does not establish those
+transitions or manual gameplay.
+
+### Login/respawn reconciliation checkpoint
+
+[PlayerRoomReconciliationTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/PlayerRoomReconciliationTests.java)
+adds four tests:
+
+- `reconcile_room_occupants`: absent-anchor occupants retain the same session,
+  position and velocity across repeated login/pocket-respawn events.
+- `reconcile_inconsistent_locations`: exterior stale session, absent session,
+  missing allocation, wrong room and non-finite position warn without
+  teleportation or destructive session changes.
+- `reconcile_exterior_respawn`: active travel is not disturbed, inactive players
+  retain sessions, live exterior respawn clears only its session, and repeated
+  events without a session are no-ops.
+- `reconcile_vanilla_respawn`: actual `PlayerList.respawn` creates a new player
+  with the same UUID, follows vanilla's resolved exterior position/orientation,
+  and clears the old room session through the registered event listener.
+
+Authorized command on 2026-10-23:
+`JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+Result: `BUILD SUCCESSFUL in 32s`, all 36 tests passed (35 mod and one vanilla).
+No live disconnect/reconnect, process restart, manual multiplayer or exhaustive
+death/drop/keep-inventory checks are inferred. Exterior stale-login recovery
+remains deliberately unresolved; no pocket occupant is automatically expelled.
+
+### Observed-occupant movement checkpoint
+
+[RoomMovementTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/RoomMovementTests.java)
+adds eight tests:
+
+- `movement_room_faces`: all five tiers, standing/crouching/swimming boxes at
+  interior faces/corners, collision-rounding tolerance, and no placed anchor.
+- `movement_departures`: all six full-body faces beyond tolerance, neighboring
+  reservation, dimension change and non-finite position after valid occupancy.
+  Death retains the session for normal post-placement respawn reconciliation.
+- `movement_vanilla_death`: actual outbound death packet contains the exact
+  approved text; creative with keepInventory retains items, survival without it
+  creates the expected actual item drops without duplication.
+- `movement_canceled_death`: a real death hook cancels/restores health and posts
+  nested ticks; exactly one attempt occurs, without recursive/repeated death.
+- `movement_session_lifecycle`: active travel is exempt; logout forgets the old
+  baseline; ambiguous occupancy suspends rather than kills or silently rearms;
+  valid room login establishes a new baseline.
+- `movement_invalid_exit_attempts`: unrelated keys and invalid controls cannot
+  disable enforcement.
+- `movement_loading_immunity`: actual cross-dimension teleport remains protected
+  during vanilla loading, but acknowledgment permits subsequent enforcement.
+- `movement_pocket_respawn`: actual vanilla replacement stays in its forced
+  pocket respawn and keeps the session. Obsolete old-player logout/tick events
+  cannot erase the replacement's baseline before its unauthorized departure.
+
+Exit/reconciliation regressions also post movement ticks before/after legitimate
+control/key exits, failed/partial/throwing teleports and inconsistent login.
+The first 42-test run compiled but five death cases failed: fixtures were still
+under vanilla client/dimension loading immunity. Acknowledgment was added to
+fixtures and production enforcement now defers damage without discarding the
+baseline. The next 43-test run exposed a fixture querying an already-reset
+combat tracker after death; assertions now inspect the emitted death packet.
+All 43 then passed. Identity-scoped old-player cleanup and the actual pocket
+respawn regression subsequently passed in the final 44-test run.
+
+Authorized command on 2026-10-23:
+`JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+Result: `BUILD SUCCESSFUL in 30s`, all 44 required tests passed (43 mod and one
+vanilla). Production JAR contains the movement implementation and excludes
+GameTest classes; whitespace check passed apart from the pre-existing
+`.gitattributes` warning. No client launch, CurseForge replacement, network
+reconnect/restart, manual multiplayer or remote CI was performed.
+
+This is post-player-tick enforcement, not proof of packet-level manipulation
+handling, every movement mechanic, unloaded-chunk behavior or arbitrary mod
+compatibility. Failed-travel recovery remains unresolved; entry/room-to-room
+travel stay disabled. Track the remaining checks in [TO_TEST](../TO_TEST.md).
+
+### Administrative anchor recovery checkpoint
+
+[AnchorRecoveryTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/AnchorRecoveryTests.java)
+adds seven tests through the actual registered command dispatcher:
+
+- `recover_anchor_tiers`: five tiers and both registration states; item count
+  and component identity; preserved occupant session, room reservation and
+  sentinel room contents. Recovery itself does not make a room available.
+- `recover_command_failures`: normal-player permission denial, malformed and
+  unknown UUIDs, console rejection and full-inventory refusal without clearing
+  a stale placed record or dropping an item.
+- `recover_placed_conflicts`: present block refusal, multiple placed records
+  refusal and successful recovery of an actually missing block's stale record.
+- `recover_unloaded_record`: initially absent chunk is loaded before a missing
+  block is declared recoverable. This does not simulate saving an existing
+  block and unloading/restarting; that remains a separate manual check.
+- `recover_relocated_duplicates`: repeated recovery can leave spare items but
+  cannot place another copy, including across dimensions. Extraction/relocation
+  consolidates identity metadata; old-dimension recovery cannot bypass it.
+- `recover_unplaced_upgrades`: actual crafting and smithing output pickup
+  updates the persistent tier before placement, while preview does not; reject
+  an obsolete lower-tier item and recover the upgraded tier.
+- `recover_anchor_storage`: recorded tier survives disk reload; strict loading
+  refuses partial/corrupt authoritative data without changing the file.
+
+The first two 50-test runs compiled and passed the recovery tests but failed the
+existing `movement_vanilla_death` actual-drop query. Unique item markers alone
+did not fix its zero count. The fixture now performs an unauthorized departure
+into the already entity-visible GameTest chunk before death and queries that
+chunk, rather than assuming newly generated room chunks expose entities
+synchronously. The next 50-test run passed, followed by the final 51-test run
+with explicit unloaded-record and room-content coverage.
+
+Exact authorized command on 2026-10-23:
+`JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+Result: `BUILD SUCCESSFUL in 43s`, all 51 required tests passed (50 mod and one
+vanilla). Production packaging/whitespace inspected separately. No installed
+client, CurseForge replacement, live multiplayer/restart or remote CI.
+
+The command restores recorded identity/tier/registration, not unknown historical
+item upgrades or custom names. Existing stores remain per dimension; resolution
+checks loaded server dimensions and refuses conflicting placed records. No
+player-session recovery, transition journal, historical-spawn tracking or entry
+route is implemented by this checkpoint. See [approved recovery policy](TRAVEL.md#approved-interrupted-transition-policy-2026-10-23)
+and [TO_TEST](../TO_TEST.md).

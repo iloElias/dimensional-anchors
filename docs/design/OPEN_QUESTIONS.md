@@ -6,7 +6,6 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
 
 ## Decisions requiring approval
 
-- **Recovery after anchor loss:** how a room becomes available again after its anchor block/item is destroyed. Until recovery is defined, preserve the room and region but suspend new entry.
 - **Presentation:** final appearance for internal blocks and whether existing anchor texture files are templates or finished art.
 - **Deferred key colors:** coloring blank and registered keys with any of the
   16 dyes in the crafting table is approved for future work. Before implementing,
@@ -41,6 +40,18 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
 - Relocation preserves keys. Anchor collection/destruction does not eject or kill occupants, and does not delete the room.
 - While the anchor is absent, existing occupants can remain/exit, but new entries are suspended until recovery/replacement.
 - One shared dimension, first-access generation, fixed tier sizes, one south-wall control block, fixed floor, and upward growth are approved.
+- Lost anchor block/item recovery is administrator-only through
+  `/dimensionalanchors recover <uuid>`; preserve recorded tier, UUID and
+  registration. Place the recovered anchor to reopen entry. This does not move
+  or otherwise involve existing occupants.
+- Entry by interacting with the matching placed anchor while holding a valid
+  registered key is approved, alongside charged remote key entry. The return
+  point is captured in front of the anchor for interaction, or at the player's
+  exterior position for remote use. Both remain disabled pending integration.
+- Interrupted-transition recovery, source-room rollback, ambiguity handling and
+  historical safe-spawn priority are approved in
+  [travel](TRAVEL.md#approved-interrupted-transition-policy-2026-10-23), but are
+  not implemented by the anchor-item recovery checkpoint.
 - The custom biome has no natural entity spawning; skybox and lighting follow The End.
 - Initial environment uses the target version's End settings, including music,
   fixed clock, lighting, no precipitation, exploding beds, and nonfunctional

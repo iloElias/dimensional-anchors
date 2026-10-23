@@ -55,12 +55,66 @@ public final class AnchorRegressionTests {
     @SubscribeEvent
     public static void register(RegisterGameTestsEvent event) {
         var environment = event.registerEnvironment(id("anchor_regressions"));
+        register(event, "recover_anchor_tiers", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::recoverTiers);
+        register(event, "recover_command_failures", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::permissionsAndFailures);
+        register(event, "recover_placed_conflicts", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::placedAndConflicting);
+        register(event, "recover_unloaded_record", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::unloadedRecord);
+        register(event, "recover_relocated_duplicates", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::repeatedAndRelocated);
+        register(event, "recover_unplaced_upgrades", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::upgradeRecovery);
+        register(event, "recover_anchor_storage", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRecoveryTests::corruptStorage);
+        register(event, "movement_room_faces", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::interiorFaces);
+        register(event, "movement_departures", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::departures);
+        register(event, "movement_vanilla_death", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::vanillaDeath);
+        register(event, "movement_canceled_death", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::canceledDeath);
+        register(event, "movement_session_lifecycle", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::lifecycle);
+        register(event, "movement_invalid_exit_attempts", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::invalidExitAttempts);
+        register(event, "movement_loading_immunity", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::loadingImmunity);
+        register(event, "movement_pocket_respawn", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomMovementTests::pocketRespawn);
+        register(event, "reconcile_room_occupants", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomReconciliationTests::occupants);
+        register(event, "reconcile_inconsistent_locations", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomReconciliationTests::inconsistentLocations);
+        register(event, "reconcile_exterior_respawn", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomReconciliationTests::exteriorRespawn);
+        register(event, "reconcile_vanilla_respawn", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomReconciliationTests::vanillaRespawn);
         register(event, "safe_room_entry", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), SafeTravelTests::entry);
         register(event, "safe_nearby_destination", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), SafeTravelTests::nearby);
         register(event, "safe_return_fallbacks", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), SafeTravelTests::returns);
+        register(event, "keyless_exit_control", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::controlExit);
+        register(event, "rejected_exit_teleport", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::rejectedTeleportKeepsSession);
+        register(event, "canceled_reentrant_exit", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::cancellationAndReentry);
+        register(event, "exceptional_exit_teleports", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::exceptionalExits);
+        register(event, "replaced_exit_sessions", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::replacedSessions);
+        register(event, "player_travel_snapshots", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomTests::travelSnapshots);
+        register(event, "arrival_validation_limits", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::arrivalLimits);
+        register(event, "travel_thread_liveness", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::travelThreadAndLiveness);
         register(event, "player_room_sessions", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), PlayerRoomTests::lifecycle);
         register(event, "player_room_invalid_data", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),

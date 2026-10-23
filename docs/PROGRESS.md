@@ -3,7 +3,7 @@
 **Date:** 2026-10-22  
 **Last updated:** 2026-10-23 (UTC-03:00)\
 **Configured version:** `0.1.0-alpha.1` (release tag: `v0.1.0-alpha.1`)  
-**Stage:** Safe entry/return resolution added; 24 local GameTests and build passed under explicit authorization. Manual room checks and CI remain separate; teleportation stays disabled.
+**Stage:** Administrative anchor recovery added; authorized build and all 51 GameTests passed. Entry remains disabled; player-transition recovery and both approved entry routes are the next implementation stages.
 
 This report distinguishes changes present in the working tree from verified gameplay.
 It does not replace the [approved design](DESIGN_DECISIONS.md) or imply that the
@@ -11,21 +11,132 @@ planned room mechanics are implemented.
 
 ## Continuation handoff, 2026-10-23
 
+- Latest checkpoint: `/dimensionalanchors recover <uuid>` is registered with
+  administrator permission and a player-only inventory recipient. It gives one
+  item with recorded UUID/tier/registration, never a key or player rescue.
+  Unknown/conflicting/unreadable records and present anchor blocks are refused.
+  A stale placed location is checked after loading the exact recorded chunk;
+  full inventory fails without dropping an item or clearing its placed record.
+- Recovery does not reopen entry by itself or touch occupants/room contents.
+  Duplicate UUID placement is now rejected across dimensions; relocation
+  consolidates records without losing registration, and obsolete lower-tier
+  items cannot downgrade an anchor. Completed crafting/smithing output pickup
+  records the tier even before placement; preview does not mutate it.
+  Strict anchor-store loading prevents partial/corrupt recovery resets.
+- Seven new recovery GameTests passed: tiers/registration/room contents and
+  session preservation, real command permission/error paths, present/conflicting/
+  stale records, unloaded-record inspection, repeat recovery/cross-dimension
+  relocation, actual crafting/smithing output pickup, and corrupt/partial disk
+  stores. A prior movement-drop fixture queried an entity-invisible newly loaded
+  room chunk; it now checks uniquely named actual drops after an unauthorized
+  departure into the already visible GameTest chunk.
+- Final recovery validation command:
+  `JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+  Result: `BUILD SUCCESSFUL in 43s`, all 51 required tests passed (50 mod and one
+  vanilla). A preceding 50-test run passed after the drop-fixture correction.
+  No CurseForge installation, client launch, live network/restart check or CI.
+  Evidence and limitations: [TO_TEST](TO_TEST.md), TT-061 through TT-072.
+- Definitions are now approved in [travel](design/TRAVEL.md): remote entry
+  captures the exterior use point; matching-anchor interaction while holding a
+  registered key captures a safe block-front return, fixed for that session.
+  Room changes preserve the first exterior return. Interrupted travel uses
+  persistent intent and verified arrival, or bounded safe-source rollback;
+  ambiguous exterior state is preserved, not punished or silently cleared.
+  Historical safe exterior respawn is added to the planned fallback chain.
+  These player-transition/entry additions are NOT implemented by this checkpoint.
+  The recovery command concerns the anchor item only; existing occupants stay
+  and may exit while the block is absent, but new entry requires it placed.
+- Owner reauthorized local implementation/build/test execution on 2026-10-23
+  after artifact generation was cached. Use one worker and no parallel Gradle
+  execution. Keep every new/changed behavior, failure path, regression and
+  actual result in [TO_TEST](TO_TEST.md); preserve the entry safety gate.
+- Latest checkpoint: `RoomMovementEnforcement` observes recorded occupants on
+  server post-player ticks. Once a valid full-body interior baseline exists,
+  unauthorized departures request vanilla generic-kill damage with the exact
+  approved death message. All five tiers, wall/corner contact, three poses,
+  six departure faces, dimension changes and invalid coordinates have headless
+  coverage. Anchor placement is never a punishment criterion.
+- Monitoring is transient and per player/session object, held by server-global
+  session data. Active travel is exempt; confirmed exit clears the observation.
+  Partial/throwing/redirected exits suspend punitive checks without guessing
+  recovery. Ordinary invalid-key/control rejections do not disarm it.
+  Ambiguous initial locations or missing/incomplete room data warn and suspend,
+  rather than retroactively punish a login. Valid room reconciliation restores
+  observation; logout and session cleanup remove it.
+- Vanilla dimension/client-loading immunity defers damage without dropping the
+  baseline. Once eligible and still outside, one damage attempt is made. A
+  canceling/resurrecting hook receives diagnostics, not repeated damage loops.
+  Actual pocket respawn preserves the session and arms the replacement player;
+  obsolete logout/tick events cannot clear that new object's observation.
+- Final movement command:
+  `JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+  Result: `BUILD SUCCESSFUL in 30s`, all 44 required tests passed (43 mod and one
+  vanilla). Eight new tests cover movement/death/lifecycle; exit/reconciliation
+  regressions now include follow-up movement ticks. Production packaging and
+  whitespace checked. No CurseForge installation, client launch or remote CI.
+  Evidence and remaining manual checks: [TO_TEST](TO_TEST.md), TT-051 through TT-060.
 - Current checkpoint: player-session persistence and safe-destination resolution
-  are implemented; the latest authorized local build and all 24 GameTests passed.
-  These results do not establish manual room validation or remote CI success.
-- Key charging still prepares/expands a room without teleporting. No gameplay
-  path creates a player session or invokes the safe-destination resolver yet.
-- Next: implement a server-authoritative travel service and functional generated
-  exit control, integrating lifecycle checks, safe destinations, session updates,
-  explicit failure feedback, and teleport failure handling. Preserve the original
-  exterior return during room-to-room travel.
-- Before exposing entry, handle legitimate transitions, movement enforcement,
-  reconnect/death reconciliation, and keyless exit while an anchor is absent.
+  are implemented; the generated exit control and server-authoritative exit
+  service are now wired. The authorized exit baseline passed 30 GameTests;
+  arrival-edge additions then passed all 32 (31 mod tests and one vanilla)
+  together with the production build.
+- Login/respawn reconciliation now preserves existing pocket occupants even
+  without an anchor; neither hook expels, teleports, kills or assigns a room.
+  Exterior login with an unresolved session warns and preserves it. Live vanilla
+  respawn outside the pocket clears only the matching captured session, after
+  vanilla placement; pocket respawn keeps it. Invalid/missing session/room/
+  position states warn without destructive repair. Active travel is not disturbed.
+- Four reconciliation tests passed, including actual `PlayerList.respawn`
+  replacement/placement and event-bus integration. Final authorized command is
+  the same one-worker build/GameTest command below; result for this checkpoint:
+  `BUILD SUCCESSFUL in 32s`, all 36 required tests passed (35 mod and one vanilla).
+  This does not simulate network disconnection/reconnection, process restart,
+  all death/drop rules or manual client rendering.
+- Owner's first exit-checkpoint build failed at `compileJava`: the new service
+  used the obsolete `ServerPlayer.serverLevel()` accessor. Replaced it with the
+  exact-version `level()` accessor in the service and exit tests. The new
+  authorized build/GameTest runs validate that correction.
+- External key charging still prepares/expands a room without entry teleport.
+  No gameplay path creates a session yet; existing-session exit now invokes the
+  safe-destination resolver.
+- Exit now validates the current room and safe destination, reports failures,
+  and retains the session when the server rejects teleportation. Successful
+  exit clears only that player's matching session. The matching room key exits
+  after charging; the generated control exits without a key.
+- Exit hardening adds a server-thread-only, per-player transient travel guard,
+  released in `finally`; post-teleport dimension/position/orientation/liveness
+  and standing-safety checks; and captured-session identity checks before
+  removal. Hooks cannot make an older exit delete a replacement session, even
+  if its room/return values match again. No schema change is needed.
+- Teleport exceptions, rejected/redirected travel, and session-cleanup conflicts
+  now have explicit diagnostics without normal success or automatic retry/
+  rollback. Confirmed arrivals clear velocity and fall distance. Partial
+  movement can leave a retained session outside; automated reconciliation is
+  still pending, not claimed as solved.
+- Four additional GameTests cover cancellation/reentrancy/retry,
+  exceptional or unconfirmed arrival, replacement sessions, and transient
+  guards/captured snapshots. All passed in the new authorized runs. Two further
+  tests cover arrival tolerances, wrapped/non-finite rotation and coordinates,
+  dead/removed players and off-thread rejection. Their initial run found a test
+  fixture with uninitialized yaw; explicit destination rotation fixed the
+  fixture and the rerun passed all 32 tests.
+- Exact final command:
+  `JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+  Result: `BUILD SUCCESSFUL in 28s`, all 32 required tests passed. Production JAR
+  contains travel/session classes and excludes the inspected GameTest classes.
+  No installation, client launch, manual multiplayer check, or remote CI run
+  was performed.
+- Next: implement the approved persistent player-transition journal, conservative
+  reconciliation/rollback, historical safe-spawn tracking and explicit retry
+  before legitimate entry/room-change
+  transactions, keeping all outstanding checks in [TO_TEST](TO_TEST.md).
+  Manual/integration checks remain pending; do not expose entry before the safety gates.
+- Before exposing entry, handle legitimate transitions and unresolved lifecycle
+  states, and validate movement/keyless exit through the full entry pipeline.
   Do not enable a standalone entry teleport without a reliable exit path.
-- Session/resolver changes remain working-tree changes unless separately
-  committed. Transfer those files as well as this report when moving machines;
-  cloning only the last committed revision is insufficient.
+- Travel-service and exit-control changes remain uncommitted working-tree changes.
+  Transfer those files as well as this report when moving machines; cloning only
+  the last committed revision is insufficient.
 - Local build permission was checkpoint-specific. Follow contribution rules
   and request authorization again for a new implementation stage.
 - Start a continuation by reading this report,
@@ -296,10 +407,12 @@ The dedicated-server startup excerpt also shows RCON listening on `0.0.0.0:25575
 
 ## Not implemented
 
-- Real key travel authorization, successful-teleport cooldown, and teleportation.
-- Integration of safe entry/return resolution with real teleportation and failure feedback.
-- Working exit controls and movement enforcement.
-- Destruction lifecycle handling and login/respawn reconciliation of persisted sessions.
+- Safe key entry and room-to-room travel, successful-entry cooldown, and session
+  creation during entry.
+- Movement enforcement, complete destruction lifecycle handling, and automatic
+  recovery of ambiguous/partial travel states. Login/pocket occupant preservation
+  and exterior respawn cleanup are implemented; full network/restart validation
+  remains pending.
 
 ## Remaining decisions and artwork
 
@@ -320,9 +433,10 @@ Reported defects and investigation candidates are tracked in
    Run CI and manually validate generation/expansion, generated-only protection,
    and save/restart preservation.
 4. Bounded safe-entry/return search and fallbacks are implemented and tested.
-   Next, wire a travel service and working exit control with persistent
-   sessions. Keep key teleportation disabled until safe exits and legitimate
-   transitions/movement enforcement are ready.
+   A server-authoritative exit service and working keyless control are now
+   implemented and passed build/GameTests. Login/respawn reconciliation passed
+   the 36-test checkpoint. Keep entry disabled until movement enforcement and
+   remaining legitimate transition/recovery handling are ready.
 5. Record additional client sound/cooldown, existing-save, and multiplayer checks when performed; do not infer results from the current confirmations.
 6. Commit, push, and release/tag operations require separate requests; none were
    performed in this checkpoint.

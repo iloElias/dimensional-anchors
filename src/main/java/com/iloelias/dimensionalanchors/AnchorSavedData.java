@@ -1,5 +1,6 @@
 package com.iloelias.dimensionalanchors;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -13,17 +14,21 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.level.storage.SavedDataStorage;
 
 public final class AnchorSavedData extends SavedData {
     private static final Identifier ID = Identifier.fromNamespaceAndPath(
             DimensionalAnchors.MODID, "anchors");
     private static final Codec<Map<UUID, AnchorRecord>> RECORDS_CODEC =
             Codec.unboundedMap(UUIDUtil.STRING_CODEC, AnchorRecord.CODEC);
-    private static final Codec<AnchorSavedData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    private static final Codec<AnchorSavedData> RAW_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RECORDS_CODEC.fieldOf("records").forGetter(data -> data.records)
     ).apply(instance, AnchorSavedData::new));
+    private static final Codec<AnchorSavedData> CODEC = SavedDataSupport.strictCodec(RAW_CODEC);
 
     public static final SavedDataType<AnchorSavedData> TYPE = new SavedDataType<>(
             ID, AnchorSavedData::new, CODEC, DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
@@ -39,7 +44,13 @@ public final class AnchorSavedData extends SavedData {
     }
 
     public static AnchorSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(TYPE);
+        var directory = DimensionType.getStorageFolder(level.dimension(),
+                level.getServer().getWorldPath(LevelResource.ROOT)).resolve("data");
+        return load(level.getDataStorage(), directory);
+    }
+
+    static AnchorSavedData load(SavedDataStorage storage, Path directory) {
+        return SavedDataSupport.load(storage, directory, TYPE);
     }
 
     public Optional<AnchorRecord> get(UUID anchorId) {

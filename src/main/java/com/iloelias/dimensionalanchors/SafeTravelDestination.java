@@ -87,6 +87,17 @@ final class SafeTravelDestination {
         return search(level, player, preferred, bounds, Optional.empty());
     }
 
+    static boolean safeArrival(ServerPlayer player, Destination destination) {
+        Vec3 actual = player.position();
+        return player.level() == destination.level() && player.isAlive() && !player.isRemoved()
+                && Double.isFinite(actual.x()) && Double.isFinite(actual.y()) && Double.isFinite(actual.z())
+                && actual.distanceToSqr(destination.position()) <= 1.0E-12
+                && Float.isFinite(player.getYRot()) && Float.isFinite(player.getXRot())
+                && Math.abs(net.minecraft.util.Mth.wrapDegrees(player.getYRot() - destination.yaw())) <= 1.0E-4F
+                && Math.abs(player.getXRot() - destination.pitch()) <= 1.0E-4F
+                && safe(destination.level(), player, actual, Optional.empty());
+    }
+
     private static Optional<Vec3> search(ServerLevel level, Player player, Vec3 preferred,
             BoundingBox search, Optional<BoundingBox> interior) {
         int minY = Math.max(search.minY(), level.getMinY() + 1);
