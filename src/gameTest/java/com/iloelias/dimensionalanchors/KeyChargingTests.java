@@ -224,6 +224,11 @@ final class KeyChargingTests {
         var messages = new ArrayList<Component>();
         var player = new Player(level, new GameProfile(UUID.randomUUID(), "missing-anchor-test")) {
             @Override
+            public GameType gameMode() {
+                return GameType.SURVIVAL;
+            }
+
+            @Override
             public boolean isClientAuthoritative() {
                 return false;
             }
