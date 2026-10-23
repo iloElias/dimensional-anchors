@@ -61,11 +61,23 @@ public final class RegisteredKeyItem extends Item {
         if (!level.isClientSide() && user instanceof Player player) {
             player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
             RegisteredKeyData keyData = stack.get(DimensionalAnchors.REGISTERED_KEY_DATA.get());
-            boolean available = level instanceof ServerLevel serverLevel && keyData != null
-                    && AnchorAvailability.isRegisteredAndPlaced(serverLevel, keyData.anchorId());
-            String message = available ? "message.dimensionalanchors.key_charge_complete"
-                    : "message.dimensionalanchors.key_anchor_unavailable";
+            boolean available = false;
+            String message = "message.dimensionalanchors.key_anchor_unavailable";
             if (level instanceof ServerLevel serverLevel) {
+                var anchor = keyData == null ? java.util.Optional.<AnchorRecord>empty()
+                        : AnchorAvailability.findRegisteredAndPlaced(serverLevel, keyData.anchorId());
+                if (anchor.isPresent()) {
+                    var record = anchor.orElseThrow();
+                    try {
+                        RoomGeneration.prepare(serverLevel, record.anchorId(), record.tier());
+                        available = true;
+                        message = "message.dimensionalanchors.key_charge_complete";
+                    } catch (IllegalStateException exception) {
+                        DimensionalAnchors.LOGGER.error("Cannot prepare room for anchor {}",
+                                record.anchorId(), exception);
+                        message = "message.dimensionalanchors.room_generation_failed";
+                    }
+                }
                 serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
                         available ? SoundEvents.CHORUS_FRUIT_TELEPORT : SoundEvents.BEACON_DEACTIVATE,
                         SoundSource.PLAYERS, 1.0F, 1.0F);

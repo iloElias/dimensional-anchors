@@ -73,7 +73,7 @@ final class PocketDimensionTests {
             helper.assertTrue(biome.getMobSettings().getMobs(category).isEmpty(),
                     "Pocket biome permits natural spawning for " + category);
         }
-        for (int[] coordinates : new int[][]{{0, 0}, {1, 1}, {127, 127}}) {
+        for (int[] coordinates : new int[][]{{128, 128}, {129, 129}, {130, 130}}) {
             var chunk = pocket.getChunk(coordinates[0], coordinates[1]);
             for (var section : chunk.getSections()) {
                 helper.assertTrue(section.hasOnlyAir(), "Generated pocket chunk contains non-air blocks");

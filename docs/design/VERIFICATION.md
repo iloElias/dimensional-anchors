@@ -185,7 +185,7 @@ uses real player item-use ticks in both hands and survival/creative:
   different anchor references, isolated per player. Verify rejection until
   expiry, reuse after expiry, and no cooldown on early release.
 - One server-side Nether portal trigger sound event per started charge; no
-  extra sound at completion or for invalid keys.
+  extra portal-trigger sound at completion or for invalid keys.
 - Explicit unlinked-preview rejection and unchanged blank-key behavior.
 - At charge completion, verify positive feedback for a registered, placed
   anchor whose block/tier match; verify unavailable feedback for missing,
@@ -204,9 +204,10 @@ Manual client checkpoint:
 2. Hold use while aiming into the air: the bow-use pose starts and the Nether
    portal contact sound plays.
 3. Continue for three seconds: the completion message appears without releasing.
-   A valid placed anchor passes the entry check; a missing or stale anchor is
-   reported unavailable. No teleport is expected; a 20-second vanilla cooldown
-   overlay appears.
+   A valid placed anchor prepares its room; a missing or stale anchor is
+   reported unavailable. Obstructions or damaged generated boundaries report
+   preparation failure with server log details. No teleport is expected; a
+   20-second vanilla cooldown overlay appears.
 4. Release earlier: the key returns to idle with no completion message or penalty.
 5. Repeat using the offhand and check first-/third-person presentation.
 6. During cooldown, switch to another copy or another registered key: use must
@@ -224,7 +225,7 @@ End-equivalent dimension settings except dragon-fight initialization, unchanged
 real End dragon-fight availability, maximum-room vertical fit, global allocation
 lookup, the flat generator's empty layers/structure overrides, exclusive custom
 biome selection, no carvers/features/precipitation/spawn entries, and three
-generated chunks (including the far edge of the allocation grid) containing
+generated chunks outside the allocation grid containing
 only air and no structure starts.
 
 The GameTest server discards standalone dimension entries, so its flat preset
@@ -256,3 +257,55 @@ Client checkpoint, in a disposable world with commands enabled:
 No claim of client rendering, existing-save migration, modded spawning
 compatibility, playable rooms, or safe entry is established by these headless
 checks.
+
+### Physical generation and generated-boundary checkpoint
+
+[RoomGenerationTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/RoomGenerationTests.java)
+adds three headless tests for all five initial room sizes, empty interiors,
+all shell coordinates and one control, repeated generation, all tier expansions,
+preserved chest contents and player-placed interior blocks, downgrade rejection,
+obstruction rejection, pending generation/expansion recovery, damaged completed
+boundary rejection, and survival/creative break-event cancellation with client
+resynchronization. Loot queries must return no drops. Player-placed utility blocks
+in interiors, outside shells, and outside the pocket dimension must not receive
+generated protection.
+
+Allocation tests additionally cover version 1 migration to version 2, strict
+room-state decoding without partial resets, and actual disk reload of pending
+and completed room records and their protection provenance. Charging tests assert
+that early release and unavailable anchors do not generate rooms, successful
+completion prepares the room, and preparation failure gives explicit feedback,
+failure audio, no teleport, and the unchanged prototype cooldown. The deliberate
+obstruction case logs an expected room-preparation error.
+
+These new tests await CI. Event cancellation and loot queries do not simulate
+actual client prediction or prove audible playback.
+
+Manual checkpoint in a disposable world, after CI passes:
+
+1. Place an anchor, register a blank key, and fully charge it in the air. Expect
+   room-prepared feedback and the approved success sound, with no teleport.
+2. Use spectator mode and an administrator command to inspect the pocket.
+   In a fresh world, the first room's interior is centered horizontally at
+   X=16/Z=16 and starts at Y=64. For slot `s`, center X is
+   `(s % 64) * 32 + 16` and center Z is `floor(s / 64) * 32 + 16`.
+   Verify tier size, two layers on every face, and one inner south-wall control.
+3. Attempt to break generated inner/outer boundary layers and the control in
+   creative and survival. Expect them to remain/resynchronize with no drops.
+   Place the same utility blocks in the interior and outside the shell, then
+   break them in creative: these player-placed blocks must remain breakable.
+4. Build inside the usable interior, including a chest with contents. Recharge
+   after cooldown, then save and restart normally; verify the same reservation,
+   construction, contents, and generated-boundary protection.
+5. Extract, upgrade, replace the anchor, and charge again. Check every upgrade,
+   unchanged floor/construction coordinates, removed old walls/control where
+   they become interior, and the relocated single south-wall control. Include
+   wall-mounted blocks: ordinary neighbor physics still applies when supports
+   move, beyond the direct-write/content-preservation assertions.
+6. Repeat with two players/independent anchors and confirm rooms remain separate.
+   Test explosions and pistons against boundaries. Commands and modded bypasses
+   are separate cases, not evidence that ordinary breaking is unprotected.
+
+The control does not exit yet. Keep a command-based administrator return path;
+do not enable ordinary player entry. Safe landing, return-session persistence,
+movement enforcement, and hard-crash transactional recovery are not validated.

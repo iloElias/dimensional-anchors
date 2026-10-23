@@ -1,6 +1,7 @@
 package com.iloelias.dimensionalanchors;
 
 import java.util.UUID;
+import java.util.Optional;
 
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
@@ -10,6 +11,10 @@ final class AnchorAvailability {
     }
 
     static boolean isRegisteredAndPlaced(ServerLevel level, UUID anchorId) {
+        return findRegisteredAndPlaced(level, anchorId).isPresent();
+    }
+
+    static Optional<AnchorRecord> findRegisteredAndPlaced(ServerLevel level, UUID anchorId) {
         var server = level.getServer();
         for (ServerLevel dataLevel : server.getAllLevels()) {
             AnchorRecord record = AnchorSavedData.get(dataLevel).get(anchorId).orElse(null);
@@ -24,14 +29,14 @@ final class AnchorAvailability {
                 continue;
             }
             if (!anchorLevel.hasChunkAt(position.pos())) {
-                return true;
+                return Optional.of(record);
             }
 
             var state = anchorLevel.getBlockState(position.pos());
             if (state.getBlock() instanceof AnchorBlock anchorBlock && anchorBlock.tier() == record.tier()) {
-                return true;
+                return Optional.of(record);
             }
         }
-        return false;
+        return Optional.empty();
     }
 }

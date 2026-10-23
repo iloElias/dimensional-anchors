@@ -83,6 +83,12 @@ public final class AnchorRegressionTests {
                 100, 0, true), KeyChargingTests::charging);
         register(event, "pocket_dimension", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), PocketDimensionTests::dimension);
+        register(event, "room_generation", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomGenerationTests::generation);
+        register(event, "room_generation_recovery", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomGenerationTests::recovery);
+        register(event, "room_boundary_protection", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomGenerationTests::protection);
     }
 
     private static void register(RegisterGameTestsEvent event, String name,

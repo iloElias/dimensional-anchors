@@ -128,6 +128,7 @@ public class DimensionalAnchors {
         CREATIVE_MODE_TABS.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(KeyCopying::update);
         NeoForge.EVENT_BUS.addListener(KeyCopying::take);
+        NeoForge.EVENT_BUS.addListener(RoomBoundaryProtection::onBreak);
     }
 
     private static DeferredBlock<Block> registerAnchor(
@@ -160,6 +161,8 @@ public class DimensionalAnchors {
                 .setId(blockKey(name))
                 .mapColor(MapColor.STONE)
                 .strength(Blocks.BEDROCK.defaultDestroyTime(), Blocks.BEDROCK.getExplosionResistance())
+                .noLootTable()
+                .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
                 .sound(Blocks.STONE.defaultBlockState().getSoundType())));
     }
 

@@ -3,13 +3,25 @@
 **Date:** 2026-10-22  
 **Last updated:** 2026-10-23 (UTC-03:00)\
 **Configured version:** `0.1.0-alpha.1` (release tag: `v0.1.0-alpha.1`)  
-**Stage:** Empty shared dimension and custom biome headless-tested and confirmed in-game by the owner. Key animation also confirmed; physical rooms and travel remain pending.
+**Stage:** Physical room generation, expansion, and generated-boundary protection implemented in source; new CI and manual checks pending. Teleportation remains disabled.
 
 This report distinguishes changes present in the working tree from verified gameplay.
 It does not replace the [approved design](DESIGN_DECISIONS.md) or imply that the
 planned room mechanics are implemented.
 
 ## Completed in source
+
+### Physical room generation and generated-boundary protection
+
+- Owner confirmed the previous CI passed after the `Player.gameMode()` fix and approved this implementation on 2026-10-23. Separately approved the temporary trigger: a full charge with an available anchor prepares its room without teleporting.
+- Added physical rooms for all five tiers within permanent reservations, with two-block-thick boundaries on all six faces and one south-wall exit block. The exit block is not functional yet.
+- Repeated charges verify an existing completed boundary without recreating the room. Upgraded anchors expand on the next successful charge, keeping the floor, existing interior blocks, block entities, and contents fixed. Only old generated boundary positions are cleared; unexpected obstructions reject the operation before writes.
+- Allocation schema 2 stores target tier, pending/completed generation, and previous tier during expansion. Schema 1 reservations migrate without changing slots. Invalid or partial room data is rejected, not reset.
+- Generation intent and boundary provenance are saved before chunk changes. An interrupted generation can resume only at its recorded target tier. A damaged completed boundary fails explicitly rather than silently rebuilding it. Saved data and chunk writes are not an atomic transaction; hard-crash durability is not claimed.
+- Server-side break cancellation applies only to persisted generated boundary positions in the pocket dimension, including both creative and survival; the client receives a corrective block update. Player-placed limiter/exit blocks in interiors, unused reservations, or other dimensions are not protected by this handler.
+- Utility blocks have no loot table and block piston movement, retaining bedrock hardness/blast resistance. Commands and other mods can still bypass ordinary block-breaking protection. Movement enforcement is deferred until legitimate travel/session transitions exist.
+- Preparation failures log anchor/error details, display translated failure feedback, and play the beacon failure sound. Successful preparation retains the approved chorus-fruit sound. The prototype cooldown remains unchanged, even on failure.
+- Added three GameTests and extended charging, allocation migration/invalid-data, and disk tests. The void-dimension test now samples empty chunks outside the room allocation grid to remain independent of generation tests.
 
 ### Empty shared dimension and biome
 
@@ -26,24 +38,24 @@ planned room mechanics are implemented.
 
 - Owner requested a presentation/timing checkpoint before dimension work and explicitly authorized local build/GameTests for it.
 - Linked keys start vanilla bow-use animation and broadcast the Nether portal contact sound (`minecraft:block.portal.trigger`) once when use begins.
-- After 60 uninterrupted use ticks, check whether the linked anchor is registered and placed; if its chunk is loaded, verify the physical block and tier. Show translated feedback for the result, then end the use cycle. No chunk is forced to load and no teleportation is attempted.
+- After 60 uninterrupted use ticks, check whether the linked anchor is registered and placed; if its chunk is loaded, verify the physical block and tier. Prepare or expand its room and show translated feedback, then end the use cycle. No exterior anchor chunk is forced to load and no teleportation is attempted. Generation temporarily loads the destination chunks, without persistent chunk tickets.
 - Releasing early returns to idle without a completion action. No key/XP consumption is applied. Early cancellation has no cooldown; the owner then requested a 400-tick vanilla cooldown after placeholder completion, shared across all registered keys/copies per player.
 - Unlinked creative-preview keys reject use with feedback; blanks are unchanged.
 - Added a GameTest for both hands and survival/creative, cancellation at ticks 0/1/30/59, exact tick-60 completion, sound dispatch, resource/position preservation, and invalid-key rejection.
 - Extended charging GameTests to pass only when a registered/placed record and matching loaded anchor block/tier are found, and to reject missing records, unregistered/unplaced records, and stale placement records. A stale linked key receives unavailable feedback at tick 60 without teleporting.
 - Added a chorus-fruit teleport sound when the entry check passes and a beacon deactivation sound when it fails. Repeated registration attempts now play the Vault rejection sound; successful registration retains the Vault insertion sound.
-- This remains a diagnostic entry check, not travel authorization. It covers a registered placed anchor and stale/missing data before room generation exists; real travel must still revalidate lifecycle state and handle rooms, destination safety, and teleportation. Owner confirmed the animation matches the intended behavior; sound/cooldown client checks were not separately reported.
+- This remains a preparation checkpoint, not travel authorization. Real travel must still revalidate lifecycle state, destination safety, return sessions, and teleportation. Owner confirmed the animation matches the intended behavior; sound/cooldown client checks were not separately reported.
 - Cooldown tests cover exact expiry (accounting for vanilla's cooldown tick at the end of the completing player tick), copy/other-reference bypass attempts, per-player isolation, and reuse after expiry. An initial timing assertion counted that completion tick twice; corrected the test after inspecting the vanilla tick order. The final full run passed.
 
 ### Room allocation and geometry foundation
 
 - Owner approved 4,096 permanent reservations per world, explicit rejection of new allocations at capacity, no region reuse, and local build/GameTests for this stage.
 - Added `RoomGeometry` with all five approved sizes, fixed floor, upward growth, consistent odd/even rounding, a two-block boundary on all six faces, and south-wall control and default entry positions. Maximum room shells occupy 20-by-20 footprints on a 32-block-spaced grid.
-- Generated-block protection is not implemented yet. Player-placed limiter and exit blocks remain breakable in creative; future protection must distinguish generated room boundaries from player-placed blocks.
-- Added server-global `RoomAllocationSavedData` in Overworld storage: UUID-to-slot mappings, idempotent reservations, a bounded append-only allocator, schema version 1, and no removal/reuse API.
+- Generated-block protection now uses persisted room geometry, not block identity alone. Player-placed limiter and exit blocks remain breakable in creative outside generated boundaries.
+- Added server-global `RoomAllocationSavedData` in Overworld storage: UUID-to-slot mappings, idempotent reservations, a bounded append-only allocator, schema version 2 with version 1 migration, and no removal/reuse API.
 - Strict decoding rejects malformed or partial mappings and unsupported versions. Existing unreadable data blocks allocation instead of being reset, preventing accidental reuse of preserved regions.
 - Added four GameTests covering every slot/tier, all 8,386,560 reservation pairs, capacity exhaustion, cross-dimension lookup, serialization, actual disk persistence, and invalid-file preservation.
-- No gameplay calls the allocator yet. Registration and copying do not allocate rooms; first access will reserve before physical generation. No dimension, biome, generated blocks, safe landing, or teleportation is claimed.
+- Completing a linked-key charge with an available anchor now calls the allocator before physical generation. Registration and copying still do not allocate rooms. Safe landing and teleportation remain unimplemented.
 - Existing dimension-local anchor persistence is unchanged. Global remote-anchor lookup/migration remains a prerequisite for future key travel.
 
 ### Design documentation
@@ -181,11 +193,17 @@ Local compilation and headless testing were explicitly authorized by the owner f
 
 The dedicated-server startup excerpt also shows RCON listening on `0.0.0.0:25575` and repeated short-lived IPv6 loopback client connections. These are informational entries, not server shutdowns; their originating process is not identified in the log. Host/container port exposure was not verified. Keep RCON restricted to trusted administration access, or disable it when unused. The INFO-level production-classpath fallback and skipped early display in headless mode are consistent with this dedicated-server launch.
 
+### Room-generation validation status, 2026-10-23
+
+- Owner confirmed that CI passed after the `gameMode()` fix, before these room-generation changes. No exact command, test count, or run URL was supplied for that confirmation.
+- New room-generation changes: GameTests/build not run locally, as required by contribution rules; CI is pending. Manual generation, expansion, creative break/resynchronization, audible sounds, normal save/restart, and multiplayer checks are pending.
+- Static validation: `git diff --check` and English translation JSON parsing passed; Git still emits the pre-existing invalid-attribute warning.
+
 ## Not implemented
 
 - Real key travel authorization, successful-teleport cooldown, and teleportation.
-- Physical room generation/expansion and integration of reservations with first access.
-- Protected boundaries, working exit controls, and movement enforcement.
+- Safe entry into generated rooms and integration with real first-entry teleportation.
+- Working exit controls and movement enforcement.
 - Destruction lifecycle handling and offline-player session handling.
 
 ## Remaining decisions and artwork
@@ -203,6 +221,6 @@ Reported defects and investigation candidates are tracked in
 
 1. The owner confirmed the upgrade/identity client checkpoint. Keep the identified creative-destruction edge case tracked as DA-001; its fix is deferred.
 2. Key-copy UUIDs, shift-click, and restored anvil sound have owner confirmation. Key animation and the empty dimension checkpoint are also confirmed.
-3. Next implementation checkpoint: physical room generation within permanent reservations. Preserve existing contents and keep key teleportation disabled until protection, safe entry/exit, and player return persistence are ready.
+3. Current implementation checkpoint: run CI and manually validate physical generation/expansion, generated-only protection, and save/restart preservation. Keep key teleportation disabled until safe entry/exit and player return persistence are ready.
 4. Record additional client sound/cooldown, existing-save, and multiplayer checks when performed; do not infer results from the current confirmations.
 5. Prepare a commit message for the accumulated changes. Commit, push, and release/tag operations require separate requests; none are performed by this documentation update.

@@ -24,6 +24,7 @@
   "message.dimensionalanchors.anchor_data_error": "Cannot register key: anchor data is missing or inconsistent. Check the server log.",
   "message.dimensionalanchors.invalid_blank_key": "Cannot register key: invalid blank key data.",
   "message.dimensionalanchors.unlinked_key": "This key is not linked to an anchor.",
-  "message.dimensionalanchors.key_charge_complete": "Anchor found and placed. Entry check passed; teleportation is not implemented yet.",
+  "message.dimensionalanchors.key_charge_complete": "Anchor found and room prepared. Teleportation is not implemented yet.",
+  "message.dimensionalanchors.room_generation_failed": "Cannot prepare the linked room. Check the server log.",
   "message.dimensionalanchors.key_anchor_unavailable": "The linked anchor is not currently placed in the world."
 }

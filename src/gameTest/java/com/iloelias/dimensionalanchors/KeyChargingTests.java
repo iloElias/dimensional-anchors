@@ -44,13 +44,14 @@ final class KeyChargingTests {
             anchorAvailability(helper);
             chargingCases(helper);
             unavailableAnchorFeedback(helper);
+            generationFailureFeedback(helper);
             helper.assertTrue(sounds.size() == 25, "Portal contact sound must play exactly once per started charge");
             helper.assertTrue(sounds.stream().allMatch(sound -> sound.getOriginalVolume() == 0.25F
                     && sound.getOriginalPitch() == 1.0F), "Unexpected portal contact audio settings");
             helper.assertTrue(availableSounds.size() == 4,
                     "Successful anchor checks must play one teleport-confirmation sound each");
-            helper.assertTrue(unavailableSounds.size() == 1,
-                    "An unavailable anchor must play one failure sound");
+            helper.assertTrue(unavailableSounds.size() == 2,
+                    "An unavailable anchor and a generation failure must each play one failure sound");
         } finally {
             NeoForge.EVENT_BUS.unregister(listener);
         }
@@ -96,6 +97,8 @@ final class KeyChargingTests {
                         "Key must use a 60-tick bow animation with automatic completion");
 
                 for (int releaseAt : new int[]{0, 1, 30, 59}) {
+                    var reservations = RoomAllocationSavedData.get(level).reservations();
+                    var room = RoomAllocationSavedData.get(level).room(anchorId);
                     helper.assertTrue(item.use(level, player, hand).consumesAction()
                             && player.isUsingItem() && player.getUsedItemHand() == hand,
                             "Linked key did not start charging in the selected hand");
@@ -109,6 +112,9 @@ final class KeyChargingTests {
                             && !player.getCooldowns().isOnCooldown(key), "Early release caused an effect or cooldown");
                     helper.assertTrue(ItemStack.matches(original, player.getItemInHand(hand)),
                             "Cancellation changed the key");
+                    helper.assertTrue(RoomAllocationSavedData.get(level).reservations().equals(reservations)
+                            && RoomAllocationSavedData.get(level).room(anchorId).equals(room),
+                            "Early release allocated or generated a room");
                 }
                 var position = player.position();
                 int xp = player.experienceLevel;
@@ -123,6 +129,8 @@ final class KeyChargingTests {
                         && messages.getFirst().getContents() instanceof TranslatableContents text
                         && text.getKey().equals("message.dimensionalanchors.key_charge_complete"),
                         "A placed linked anchor must pass the entry check on tick 60");
+                helper.assertTrue(RoomAllocationSavedData.get(level).room(anchorId).orElseThrow().complete(),
+                        "A successful charge did not prepare the room");
                 helper.assertTrue(player.getCooldowns().isOnCooldown(key),
                         "Completed charge must apply cooldown");
                 helper.assertTrue(player.getCooldowns().getCooldownPercent(key, 0) == 399.0F / 400.0F,
@@ -255,5 +263,50 @@ final class KeyChargingTests {
                 "A stale anchor record must show unavailable feedback when the 60-tick charge completes");
         helper.assertTrue(player.getCooldowns().isOnCooldown(key) && player.position().equals(position)
                 && player.level() == level, "Unavailable completion should not teleport and must keep prototype cooldown");
+        helper.assertTrue(RoomAllocationSavedData.get(level).find(anchorId).isEmpty(),
+                "Unavailable anchor allocated a room");
+    }
+
+    private static void generationFailureFeedback(GameTestHelper helper) {
+        var level = helper.getLevel();
+        UUID id = UUID.randomUUID();
+        BlockPos anchorPos = helper.absolutePos(new BlockPos(14, 2, 14));
+        level.setBlockAndUpdate(anchorPos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        AnchorSavedData.get(level).put(AnchorRecord.unplaced(id, AnchorTier.COPPER, true)
+                .placedAt(GlobalPos.of(level.dimension(), anchorPos)));
+        var data = RoomAllocationSavedData.get(level);
+        var geometry = new RoomGeometry(data.reserve(id), AnchorTier.COPPER);
+        var pocket = level.getServer().getLevel(RoomGeneration.POCKET);
+        pocket.setBlockAndUpdate(geometry.exitControl(), Blocks.STONE.defaultBlockState());
+        var messages = new ArrayList<Component>();
+        var player = new Player(level, new GameProfile(UUID.randomUUID(), "room-failure-test")) {
+            @Override
+            public GameType gameMode() {
+                return GameType.SURVIVAL;
+            }
+
+            @Override
+            public boolean isClientAuthoritative() {
+                return false;
+            }
+
+            @Override
+            public void sendOverlayMessage(Component message) {
+                messages.add(message);
+            }
+        };
+        var key = DimensionalAnchors.DIMENSIONAL_KEY.get().getDefaultInstance();
+        key.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(id));
+        var position = player.position();
+        key.getItem().finishUsingItem(key, level, player);
+        helper.assertTrue(messages.size() == 1
+                && messages.getFirst().getContents() instanceof TranslatableContents text
+                && text.getKey().equals("message.dimensionalanchors.room_generation_failed"),
+                "Generation failure did not show explicit feedback");
+        helper.assertTrue(data.room(id).isEmpty() && player.position().equals(position)
+                && player.level() == level && player.getCooldowns().isOnCooldown(key)
+                && pocket.getBlockState(geometry.exitControl()).is(Blocks.STONE),
+                "Generation failure changed blocks, moved the player, or lost prototype cooldown");
+        pocket.setBlockAndUpdate(geometry.exitControl(), Blocks.AIR.defaultBlockState());
     }
 }

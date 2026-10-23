@@ -52,10 +52,10 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
 - Normal wall movement must not cause false deaths. Process legitimate exits and internal mod teleports correctly before violation enforcement.
 - Cover login, respawn, invalid coordinates, and client position manipulation without recursive or repeated death events.
 
-## Implemented geometry foundation
+## Implemented geometry and generation
 
 - `RoomGeometry` defines usable cubic interiors of 3, 5, 7, 10, and 16 blocks.
-  It calculates coordinates only; no room blocks are generated yet.
+  Physical generation uses these coordinates within the permanent reservation.
 - Floor blocks are at Y=63; usable space begins at Y=64. Expansion keeps this
   floor fixed and raises the ceiling.
 - For horizontal reference `(x, z)` and interior size `n`, minimum coordinates
@@ -67,7 +67,30 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
   interior Z. The single control position is one block south and one block above
   those feet, in the inner layer of the south wall. Future entry faces north.
 - These are default coordinates, not proof of a safe landing after construction.
-  Obstruction checks, physical wall/control behavior, and generated-block protection are
-  still pending. No teleportation uses these coordinates yet.
+  Safe landing and functional exit controls remain pending. No teleportation
+  uses these coordinates yet.
+
+- Temporarily, a full charge with an available linked anchor prepares its room
+  without moving the player, as approved by the owner. An upgraded anchor expands
+  the existing room on the next charge; registration/copying do not generate.
+- Saved generation state records target tier and completion, retaining the previous
+  tier while expanding. It is flushed before writes so pending work can resume at
+  the same tier. Existing completed rooms are verified, not regenerated.
+- Preflight rejects unexpected blocks in coordinates needed for generation or
+  expansion before writing. Existing usable interior blocks and block entities
+  are untouched. Expansion removes only the previous generated shell where it
+  becomes interior and relocates the one south-wall control.
+- Boundary protection is derived from persisted generated geometry (including both
+  shells during a pending expansion). Server-side break cancellation sends a
+  corrective block update, including in creative, rather than breaking and
+  replacing blocks or dropping items.
+- The same utility block types placed in an interior, ungenerated region, or
+  another dimension are not protected by this listener. Both utility types have
+  no loot table, bedrock hardness/resistance, and blocked piston movement.
+- Commands/modded bypasses and unauthorized player movement are not covered by
+  this checkpoint. A completed boundary changed through such a bypass fails
+  verification explicitly; generation does not silently recreate it.
+- Normal persistence and pending-state recovery have regression tests awaiting CI.
+  Saved data and chunks do not form an atomic crash-safe transaction.
 
 Safe entry placement and migration remain in [open questions](OPEN_QUESTIONS.md).

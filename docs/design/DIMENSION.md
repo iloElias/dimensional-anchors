@@ -55,16 +55,19 @@ still require [technical planning](OPEN_QUESTIONS.md).
   dimension-local anchor records are not migrated or otherwise changed here.
 - Reservations are idempotent for an existing UUID, append-only, and never
   reclaimed. Exhaustion raises an explicit error without changing existing
-  reservations. Player-facing translation is deferred until first-access
-  gameplay calls the allocator; there is no new player entry path yet.
-- Schema version 1 rejects unsupported versions, invalid UUIDs, out-of-range,
+  reservations. Key completion reports preparation failure explicitly; there
+  is no player entry path yet.
+- Schema version 2 migrates version 1 reservations and adds pending/completed room
+  generation and boundary provenance. It rejects unsupported versions, invalid UUIDs, out-of-range,
   duplicate, or non-contiguous slots, including partial codec results.
   Unreadable existing files block allocation rather than being replaced by an
   empty store. Layout/schema changes require an explicit future migration.
-- This foundation does not reserve on crafting, placement, registration, or
-  copying. First-access generation will call it before generating a room.
-  No custom dimension, biome, chunks, physical room, or teleports are created
-  by this implementation.
+- Crafting, placement, registration, and copying do not reserve rooms. As a
+  temporary approved checkpoint, completing a linked-key charge with an available
+  anchor reserves and generates/expands its room, without teleporting.
+- Room preparation loads at most four destination chunks for the current maximum
+  shell footprint on this grid, without permanent chunk tickets or exterior
+  anchor chunk forcing. The void world generator itself still creates only air.
 
 ## Implemented empty dimension checkpoint
 

@@ -85,6 +85,8 @@ final class RoomAllocationTests {
             helper.assertTrue(data.reserve(new UUID(0, slot)) == slot, "Allocation skipped or reused a slot");
         }
         var json = RoomAllocationSavedData.CODEC.encodeStart(JsonOps.INSTANCE, data).getOrThrow();
+        helper.assertTrue(json.getAsJsonObject().get("data_version").getAsInt() == 2
+                && json.getAsJsonObject().has("rooms"), "Legacy allocations did not migrate to schema 2");
         var reloaded = RoomAllocationSavedData.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
         helper.assertTrue(reloaded.reservations().equals(data.reservations()), "Reload changed reservations");
         helper.assertTrue(reloaded.reserve(first) == 0, "Existing room rejected at capacity after reload");
@@ -124,12 +126,40 @@ final class RoomAllocationTests {
             helper.assertTrue(decoded.error().isPresent() && decoded.resultOrPartial(error -> {}).isEmpty(),
                     "Malformed allocation data accepted: " + json);
         }
-        for (int version : new int[]{0, 2}) {
+        for (int version : new int[]{0, 3}) {
             var json = new JsonObject();
             json.addProperty("data_version", version);
             json.add("slots", new JsonObject());
             helper.assertTrue(RoomAllocationSavedData.CODEC.parse(JsonOps.INSTANCE, json).error().isPresent(),
                     "Unsupported allocation version accepted");
+        }
+        var valid = emptyData();
+        UUID id = UUID.randomUUID();
+        valid.reserve(id);
+        valid.putRoom(id, new RoomGenerationState(AnchorTier.COPPER, java.util.Optional.empty(), true));
+        var encoded = RoomAllocationSavedData.CODEC.encodeStart(JsonOps.INSTANCE, valid)
+                .getOrThrow().getAsJsonObject();
+        for (int scenario = 0; scenario < 5; scenario++) {
+            var invalid = encoded.deepCopy();
+            if (scenario == 0) {
+                invalid.remove("rooms");
+            } else if (scenario == 1) {
+                invalid.getAsJsonObject("rooms").add(UUID.randomUUID().toString(),
+                        invalid.getAsJsonObject("rooms").get(id.toString()).deepCopy());
+            } else {
+                var room = invalid.getAsJsonObject("rooms").getAsJsonObject(id.toString());
+                if (scenario == 2) {
+                    room.addProperty("tier", "invalid");
+                } else if (scenario == 3) {
+                    room.addProperty("previous_tier", "copper");
+                } else {
+                    room.addProperty("complete", false);
+                    room.addProperty("previous_tier", "netherite");
+                }
+            }
+            var decoded = RoomAllocationSavedData.CODEC.parse(JsonOps.INSTANCE, invalid);
+            helper.assertTrue(decoded.error().isPresent() && decoded.resultOrPartial(error -> {}).isEmpty(),
+                    "Invalid generation data accepted or partially recovered");
         }
     }
 
@@ -146,6 +176,10 @@ final class RoomAllocationTests {
                     var data = RoomAllocationSavedData.load(storage, directory);
                     helper.assertTrue(data.reserve(first) == 0 && data.reserve(second) == 1,
                             "Fresh disk allocations failed");
+                    data.putRoom(first, new RoomGenerationState(AnchorTier.IRON,
+                            java.util.Optional.of(AnchorTier.COPPER), false));
+                    data.putRoom(second, new RoomGenerationState(AnchorTier.NETHERITE,
+                            java.util.Optional.empty(), true));
                     storage.saveAndJoin();
                 }
                 helper.assertTrue(Files.isRegularFile(file), "Allocation file was not written");
@@ -154,11 +188,17 @@ final class RoomAllocationTests {
                     var data = RoomAllocationSavedData.load(storage, directory);
                     helper.assertTrue(data.find(first).orElseThrow() == 0
                             && data.find(second).orElseThrow() == 1, "Disk reload changed room mappings");
+                    helper.assertTrue(!data.room(first).orElseThrow().complete()
+                            && data.room(first).orElseThrow().previousTier().orElseThrow() == AnchorTier.COPPER
+                            && data.room(second).orElseThrow().complete()
+                            && data.protects(new RoomGeometry(0, AnchorTier.COPPER).exitControl())
+                            && data.protects(new RoomGeometry(1, AnchorTier.NETHERITE).exitControl()),
+                            "Disk reload lost pending/completed generation or boundary provenance");
                     helper.assertTrue(data.reserve(UUID.randomUUID()) == 2, "Disk reload lost next slot");
                     storage.saveAndJoin();
                 }
                 var tag = NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap());
-                tag.getCompound("data").orElseThrow().putInt("data_version", 2);
+                tag.getCompound("data").orElseThrow().putInt("data_version", 3);
                 NbtIo.writeCompressed(tag, file);
                 for (int scenario = 0; scenario < 3; scenario++) {
                     if (scenario == 1) {
