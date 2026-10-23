@@ -57,6 +57,10 @@ public final class AnchorRegressionTests {
                 100, 0, true), helper -> stackPlacement(helper, GameType.CREATIVE));
         register(event, "upgraded_extraction", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRegressionTests::upgradedExtraction);
+        register(event, "key_registration", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRegressionTests::keyRegistration);
+        register(event, "key_registration_lifecycle", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRegressionTests::keyRegistrationLifecycle);
     }
 
     private static void register(RegisterGameTestsEvent event, String name,
@@ -117,33 +121,176 @@ public final class AnchorRegressionTests {
                         "Repeated previews must be deterministic");
             }
 
-            ItemStack invalid = raw.copy();
-            invalid.set(DimensionalAnchors.ANCHOR_ITEM_DATA.get(),
-                    new AnchorItemData(UUID.randomUUID(), tier, false));
-            if (recipe instanceof ShapedRecipe shaped) {
-                CraftingInput good = crafting(raw, material(tier));
-                List<ItemStack> missing = new ArrayList<>(good.items());
-                missing.set(0, ItemStack.EMPTY);
-                helper.assertTrue(!shaped.matches(CraftingInput.of(3, 3, missing), helper.getLevel()),
-                        "Missing surrounding material must fail");
-                helper.assertTrue(!shaped.matches(crafting(raw, Items.DIRT), helper.getLevel()),
-                        "Wrong material must fail");
-                helper.assertTrue(!shaped.matches(crafting(ItemStack.EMPTY, material(tier)), helper.getLevel()),
-                        "Missing anchor must fail");
-                helper.assertTrue(!shaped.matches(crafting(new ItemStack(Items.STONE), material(tier)),
-                        helper.getLevel()), "Wrong center item must fail");
-                helper.assertTrue(!shaped.matches(crafting(invalid, material(tier)), helper.getLevel()),
-                        "Mismatched component tier must fail");
-                helper.assertTrue(!shaped.matches(CraftingInput.of(2, 2,
-                        List.of(raw, raw, raw, raw)), helper.getLevel()), "2x2 crafting must fail");
-            } else if (recipe instanceof SmithingTransformRecipe smithing) {
-                helper.assertTrue(!smithing.matches(new SmithingRecipeInput(ItemStack.EMPTY, raw,
-                        new ItemStack(Items.NETHERITE_INGOT)), helper.getLevel()), "Missing template must fail");
-                helper.assertTrue(!smithing.matches(smithing(invalid), helper.getLevel()), "Invalid tier must fail");
-                helper.assertTrue(!smithing.matches(new SmithingRecipeInput(
-                        new ItemStack(DimensionalAnchors.DIMENSIONAL_UPGRADE_TEMPLATE.get()), raw,
-                        new ItemStack(Items.DIRT)), helper.getLevel()), "Wrong addition must fail");
+            validateInvalidUpgrade(helper, recipe, raw, tier);
+        }
+    }
+
+    private static void keyRegistration(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var saved = AnchorSavedData.get(level);
+        BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
+        var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+        for (AnchorTier tier : AnchorTier.values()) {
+            for (GameType mode : List.of(GameType.SURVIVAL, GameType.CREATIVE)) {
+                for (InteractionHand hand : InteractionHand.values()) {
+                    var player = helper.makeMockPlayer(mode);
+                    mode.updatePlayerAbilities(player.getAbilities());
+                    var otherHand = hand == InteractionHand.MAIN_HAND
+                            ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+                    ItemStack untouched = new ItemStack(Items.STONE);
+                    player.setItemInHand(otherHand, untouched);
+                    var block = ((BlockItem) DimensionalAnchors.anchorItem(tier).get()).getBlock();
+                    level.setBlockAndUpdate(pos, block.defaultBlockState());
+                    UUID anchorId = UUID.randomUUID();
+                    var record = AnchorRecord.unplaced(anchorId, tier, false)
+                            .placedAt(GlobalPos.of(level.dimension(), pos));
+                    saved.put(record);
+                    ItemStack blank = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get());
+                    helper.assertTrue(!blank.getItem().isFoil(blank), "Blank key must not glow");
+                    player.setItemInHand(hand, blank);
+                    helper.assertTrue(level.getBlockState(pos).useItemOn(blank, level, player, hand, hit).consumesAction(),
+                            "First blank key must register for " + tier + ", " + mode + ", " + hand);
+                    ItemStack key = player.getItemInHand(hand);
+                    helper.assertTrue(key.getItem().isFoil(key), "Linked key must glow");
+                    ItemStack unlinked = key.copy();
+                    unlinked.remove(DimensionalAnchors.REGISTERED_KEY_DATA.get());
+                    helper.assertTrue(!unlinked.getItem().isFoil(unlinked), "Removing the reference must remove the key glint");
+                    helper.assertTrue(key.getItem() == DimensionalAnchors.DIMENSIONAL_KEY.get()
+                            && key.getCount() == 1 && key.getMaxStackSize() == 1, "Registration must replace one key");
+                    helper.assertTrue(new RegisteredKeyData(anchorId).equals(
+                            key.get(DimensionalAnchors.REGISTERED_KEY_DATA.get())), "Key references the wrong UUID");
+                    helper.assertTrue(saved.get(anchorId).orElseThrow().equals(record.withRegistered(true)),
+                            "Registration must only change the saved registration flag");
+                    helper.assertTrue(player.getItemInHand(otherHand) == untouched, "Registration changed the other hand");
+
+                    var competitor = helper.makeMockPlayer(GameType.SURVIVAL);
+                    ItemStack secondBlank = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get());
+                    competitor.setItemInHand(hand, secondBlank);
+                    helper.assertTrue(!level.getBlockState(pos).useItemOn(secondBlank, level, competitor, hand, hit)
+                            .consumesAction(), "A second player must not register another blank key");
+                    helper.assertTrue(competitor.getItemInHand(hand) == secondBlank
+                            && !secondBlank.has(DimensionalAnchors.REGISTERED_KEY_DATA.get()),
+                            "Rejected registration consumed or changed the blank key");
+                    helper.assertTrue(saved.get(anchorId).orElseThrow().registered(), "Rejection reset registration");
+
+                    var ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+                    var encoded = ItemStack.CODEC.encodeStart(ops, key).getOrThrow();
+                    var restored = ItemStack.CODEC.parse(ops, encoded).getOrThrow();
+                    helper.assertTrue(ItemStack.isSameItemSameComponents(key, restored), "Key persistence lost data");
+                    helper.assertTrue(restored.getItem().isFoil(restored), "Restored linked key must glow");
+                    var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
+                    try {
+                        ItemStack.STREAM_CODEC.encode(buffer, key);
+                        helper.assertTrue(ItemStack.isSameItemSameComponents(key, ItemStack.STREAM_CODEC.decode(buffer)),
+                                "Key synchronization lost data");
+                    } finally {
+                        buffer.release();
+                    }
+
+                    saved.remove(anchorId);
+                    helper.assertTrue(!level.getBlockState(pos).useItemOn(secondBlank, level, competitor, hand, hit)
+                            .consumesAction(), "Missing saved data must not silently recreate an anchor");
+                    helper.assertTrue(saved.get(anchorId).isEmpty()
+                            && competitor.getItemInHand(hand) == secondBlank, "Missing-data rejection changed state");
+                }
             }
+        }
+        var block = DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get();
+        level.setBlockAndUpdate(pos, block.defaultBlockState());
+        UUID id = UUID.randomUUID();
+        var record = AnchorRecord.unplaced(id, AnchorTier.COPPER, false)
+                .placedAt(GlobalPos.of(level.dimension(), pos));
+        saved.put(record);
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ItemStack malformed = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get(), 2);
+        player.setItemInHand(InteractionHand.MAIN_HAND, malformed);
+        helper.assertTrue(!level.getBlockState(pos).useItemOn(malformed, level, player, InteractionHand.MAIN_HAND, hit)
+                .consumesAction(), "Malformed blank stack must not register");
+        malformed.setCount(1);
+        malformed.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(UUID.randomUUID()));
+        helper.assertTrue(!level.getBlockState(pos).useItemOn(malformed, level, player, InteractionHand.MAIN_HAND, hit)
+                .consumesAction(), "Blank key with a preexisting reference must not register");
+        ItemStack preview = new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, preview);
+        level.getBlockState(pos).useItemOn(preview, level, player, InteractionHand.MAIN_HAND, hit);
+        helper.assertTrue(saved.get(id).orElseThrow().equals(record), "Registered-key preview changed registration");
+        helper.assertTrue(!preview.has(DimensionalAnchors.REGISTERED_KEY_DATA.get()), "Preview key acquired identity");
+        helper.assertTrue(!preview.getItem().isFoil(preview), "Unlinked creative preview key must not glow");
+    }
+
+    private static void keyRegistrationLifecycle(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var saved = AnchorSavedData.get(level);
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
+        level.setBlockAndUpdate(pos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+        var block = level.getBlockState(pos).getBlock();
+        block.setPlacedBy(level, pos, level.getBlockState(pos), player,
+                new ItemStack(DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR_ITEM.get()));
+        UUID id = saved.findAt(GlobalPos.of(level.dimension(), pos)).orElseThrow().anchorId();
+        ItemStack blank = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, blank);
+        var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+        helper.assertTrue(level.getBlockState(pos).useItemOn(blank, level, player, InteractionHand.MAIN_HAND, hit)
+                .consumesAction(), "Lifecycle registration failed");
+        ItemStack key = player.getItemInHand(InteractionHand.MAIN_HAND).copy();
+        block.playerDestroy(level, player, pos, level.getBlockState(pos), null, new ItemStack(Items.IRON_PICKAXE));
+        var drops = level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(1));
+        helper.assertTrue(drops.size() == 1, "Registered anchor extraction produced the wrong number of drops");
+        ItemStack anchor = drops.getFirst().getItem().copy();
+        drops.forEach(ItemEntity::discard);
+        helper.assertTrue(new AnchorItemData(id, AnchorTier.COPPER, true).equals(
+                anchor.get(DimensionalAnchors.ANCHOR_ITEM_DATA.get())), "Registered anchor drop lost its data");
+        anchor = upgrade(helper, recipe(helper, AnchorTier.IRON), anchor, AnchorTier.IRON);
+
+        var ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        var restored = AnchorSavedData.TYPE.codec().parse(ops,
+                AnchorSavedData.TYPE.codec().encodeStart(ops, saved).getOrThrow()).getOrThrow();
+        saved.put(restored.get(id).orElseThrow());
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        BlockPos moved = pos.above(3);
+        level.setBlockAndUpdate(moved.below(), Blocks.STONE.defaultBlockState());
+        var context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, anchor,
+                new BlockHitResult(Vec3.atBottomCenterOf(moved), Direction.UP, moved.below(), false));
+        helper.assertTrue(((BlockItem) anchor.getItem()).place(context).consumesAction(), "Registered relocation failed");
+        ItemStack second = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, second);
+        helper.assertTrue(!level.getBlockState(moved).useItemOn(second, level, player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(moved), Direction.UP, moved, false)).consumesAction(),
+                "Reload, upgrade or relocation allowed a second registration");
+        helper.assertTrue(saved.get(id).orElseThrow().tier() == AnchorTier.IRON
+                && saved.get(id).orElseThrow().registered(), "Relocated registration state is incorrect");
+        helper.assertTrue(new RegisteredKeyData(id).equals(key.get(DimensionalAnchors.REGISTERED_KEY_DATA.get())),
+                "Existing key no longer references the upgraded anchor");
+    }
+
+    private static void validateInvalidUpgrade(GameTestHelper helper, Recipe<?> recipe, ItemStack raw, AnchorTier tier) {
+        ItemStack invalid = raw.copy();
+        invalid.set(DimensionalAnchors.ANCHOR_ITEM_DATA.get(),
+                new AnchorItemData(UUID.randomUUID(), tier, false));
+        if (recipe instanceof ShapedRecipe shaped) {
+            CraftingInput good = crafting(raw, material(tier));
+            List<ItemStack> missing = new ArrayList<>(good.items());
+            missing.set(0, ItemStack.EMPTY);
+            helper.assertTrue(!shaped.matches(CraftingInput.of(3, 3, missing), helper.getLevel()),
+                    "Missing surrounding material must fail");
+            helper.assertTrue(!shaped.matches(crafting(raw, Items.DIRT), helper.getLevel()),
+                    "Wrong material must fail");
+            helper.assertTrue(!shaped.matches(crafting(ItemStack.EMPTY, material(tier)), helper.getLevel()),
+                    "Missing anchor must fail");
+            helper.assertTrue(!shaped.matches(crafting(new ItemStack(Items.STONE), material(tier)),
+                    helper.getLevel()), "Wrong center item must fail");
+            helper.assertTrue(!shaped.matches(crafting(invalid, material(tier)), helper.getLevel()),
+                    "Mismatched component tier must fail");
+            helper.assertTrue(!shaped.matches(CraftingInput.of(2, 2,
+                    List.of(raw, raw, raw, raw)), helper.getLevel()), "2x2 crafting must fail");
+        } else if (recipe instanceof SmithingTransformRecipe smithing) {
+            helper.assertTrue(!smithing.matches(new SmithingRecipeInput(ItemStack.EMPTY, raw,
+                    new ItemStack(Items.NETHERITE_INGOT)), helper.getLevel()), "Missing template must fail");
+            helper.assertTrue(!smithing.matches(smithing(invalid), helper.getLevel()), "Invalid tier must fail");
+            helper.assertTrue(!smithing.matches(new SmithingRecipeInput(
+                    new ItemStack(DimensionalAnchors.DIMENSIONAL_UPGRADE_TEMPLATE.get()), raw,
+                    new ItemStack(Items.DIRT)), helper.getLevel()), "Wrong addition must fail");
         }
     }
 

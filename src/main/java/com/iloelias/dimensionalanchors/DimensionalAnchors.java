@@ -79,7 +79,9 @@ public class DimensionalAnchors {
     public static final DeferredItem<Item> DIMENSIONAL_UPGRADE_TEMPLATE =
             ITEMS.registerSimpleItem("dimensional_upgrade_template");
     public static final DeferredItem<Item> DIMENSIONAL_KEY =
-            registerKeyItem("dimensional_key");
+            ITEMS.register("dimensional_key", () -> new RegisteredKeyItem(new Item.Properties()
+                    .setId(itemKey("dimensional_key"))
+                    .stacksTo(1)));
     public static final DeferredItem<Item> UNASSIGNED_DIMENSIONAL_KEY =
             registerKeyItem("unassigned_dimensional_key");
 

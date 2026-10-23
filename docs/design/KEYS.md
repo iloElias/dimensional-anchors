@@ -58,3 +58,22 @@ Combine a registered key in the first input with a blank key in the second input
 - Plan server-to-client status synchronization before claiming the tooltip is supported.
 
 The [blank-key recipe](RECIPES.md) is approved. Whether states use distinct item registrations and whether copies need individual identifiers remain technical choices.
+
+## Current implementation checkpoint
+
+Blank and registered states use separate item registrations. Right-click a placed
+anchor with a blank key in either hand to register it once. The server replaces
+the held item with one registered key, including in creative, and persists the
+anchor's registration flag. Further blank-key attempts leave the key unchanged.
+The key stores `dimensionalanchors:registered_key`, containing the anchor UUID;
+the extracted anchor's `dimensionalanchors:anchor_data` retains `registered=true`.
+
+This checkpoint only implements identity registration. It does not generate a
+room, teleport the player, enable anvil copying, or show anchor availability.
+An unlinked registered-key item from the creative preview is not a valid key.
+Successful registration plays the vanilla Vault insert-item sound
+(`minecraft:block.vault.insert_item`), selected by the owner after auditioning it.
+Registered keys with a UUID component have glint; blanks and unlinked preview
+keys do not. The owner confirmed glint and success-only playback with the
+previous sounds; the Vault sound was approved through an in-game command preview.
+See [progress](../PROGRESS.md) for test evidence and pending client validation.

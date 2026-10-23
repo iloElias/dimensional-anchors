@@ -17,5 +17,9 @@
   "item.dimensionalanchors.dimensional_catalyst": "Dimensional Catalyst",
   "item.dimensionalanchors.dimensional_upgrade_template": "Dimensional Upgrade Template",
   "item.dimensionalanchors.unassigned_dimensional_key": "Blank Dimensional Key",
-  "item.dimensionalanchors.dimensional_key": "Registered Dimensional Key"
+  "item.dimensionalanchors.dimensional_key": "Registered Dimensional Key",
+  "message.dimensionalanchors.key_registered": "Key registered. Teleportation is not implemented yet.",
+  "message.dimensionalanchors.already_registered": "This anchor has already been registered. Another blank key cannot be linked.",
+  "message.dimensionalanchors.anchor_data_error": "Cannot register key: anchor data is missing or inconsistent. Check the server log.",
+  "message.dimensionalanchors.invalid_blank_key": "Cannot register key: invalid blank key data."
 }

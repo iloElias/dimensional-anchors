@@ -57,7 +57,42 @@ not a final implementation of key states or survival availability.
 - Wired anchor placement to create a UUID when needed and persist its position.
 - Wired player extraction to return the same UUID and preserve registration data.
 - Upgrade recipes now preserve identity, registration, and other item components.
-- Key registration is not wired yet.
+- First-key registration is wired; key copying and teleportation are not implemented.
+
+### First-key registration
+
+- Use a blank key on an unregistered placed anchor to replace it with a registered
+  key referencing the same UUID and persist `registered=true` on the server.
+- Registration works in either hand and in survival/creative. It replaces the
+  held blank even in creative, rather than leaving an extra blank or issuing
+  repeated registered keys.
+- Further blank-key registration is rejected without consuming the item,
+  including after extraction, upgrade, serialized reload, and relocation.
+- Missing/inconsistent anchor records and malformed blanks are rejected with
+  translated feedback and server logging; no new identity is created on failure.
+- Success feedback explicitly notes that teleportation is not implemented.
+- Added two registration GameTests covering all tiers, both hands/game modes,
+  a second player's attempt, invalid inputs, key persistence/network codecs,
+  and the registered extraction/upgrade/relocation lifecycle.
+- DA-001 remains deferred. Room generation, travel, key copying, and unavailable
+  status tooltips are not part of this change.
+- Added the vanilla Vault insert-item sound on successful registration,
+  broadcast from the server to nearby players, including the registering player.
+  Rejected attempts do not trigger the sound.
+- Registered-key items now request glint only when their registered-key component
+  is present. Blank and unlinked creative-preview keys do not request glint.
+- Owner confirmed matching key/anchor UUIDs and repeated-registration rejection
+  after upgrades and restarting the game. A freshly extracted Gold anchor was
+  nevertheless reported with `registered:0b`; tracked as
+  [DA-002](KNOWN_ISSUES.md#da-002-extracted-registered-anchor-reported-with-an-unset-registration-flag),
+  not claimed resolved by a code fix. Follow-up Copper testing confirmed
+  `registered:0b` without a key and `registered:1b` after key registration;
+  the original Gold report remains unexplained and was not reproduced.
+- Owner confirmed key glint and silence on rejected registration. The initial
+  Respawn Anchor sound worked but was rejected aesthetically; replaced with
+  the Enchantment Table sound, also rejected aesthetically. The owner then
+  auditioned and approved `minecraft:block.vault.insert_item`; registration
+  now uses `SoundEvents.VAULT_INSERT_ITEM`.
 
 ### Netherite recipe synchronization fix
 
@@ -130,6 +165,8 @@ not a final implementation of key states or survival availability.
 | `git diff --check` on modified workflow/documentation/assets | No whitespace errors reported; Git emitted an existing invalid-attribute warning from `.gitattributes` |
 | Initial local compilation attempt | Not completed: direct wrapper execution was denied; retry via Bash ended with exit code 143 during Minecraft decompilation |
 | Authorized local regression run: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; four mod regression tests and one vanilla test passed; production JAR built successfully |
+| Authorized local first-key registration run: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; six mod GameTests and one vanilla test passed; production JAR built successfully. Error/warning logs for deliberately missing anchor data and malformed blank keys are expected rejection tests |
+| Authorized sound/glint run: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; all seven GameTests and build passed, including linked/unlinked/blank/restored key foil checks. Audible playback and client rendering remain manual checks |
 | GitHub Actions compilation and release publication | Not run in this session |
 | Owner's in-game report, 2026-10-23: full upgrade progression and extraction | Passed; UUID `00374300-47de-448e-8721-8097b10908f3` retained through Iron, Gold, Diamond, and Netherite; tier updated and registration remained false |
 | Owner's in-game report: save, leave, reopen, and extract | Passed; Copper UUID `8d4343c1-258d-48cd-ada4-6f276b7e23fb` retained |
@@ -139,14 +176,13 @@ not a final implementation of key states or survival availability.
 | Sound checks and dedicated-server multiplayer client synchronization for these fixes | Not performed in the reported checkpoint |
 
 Local compilation and headless testing were explicitly authorized by the owner
-for this regression task. Client results above were reported by the owner, not
+for the regression and first-key registration tasks. Client results above were reported by the owner, not
 executed by the assistant. No published release or broader mod compatibility is
 claimed; the normal restriction on local compilation remains.
 
 ## Not implemented
 
-- Anvil key copying and registration, including preservation of key data.
-- Key registration, copying, charge, cooldown, and teleportation.
+- Anvil key copying, charge, cooldown, and teleportation.
 - Room identity, persistence, allocation, generation, and expansion.
 - Shared dimension and custom biome.
 - Protected boundaries, working exit controls, and movement enforcement.
@@ -167,7 +203,9 @@ Reported defects and investigation candidates are tracked in
 
 1. The owner confirmed the upgrade/identity client checkpoint. Keep the identified
    creative-destruction edge case tracked as DA-001; its fix is deferred.
-2. On approval to proceed, add key registration using the persisted anchor identity.
+2. Confirm first-key registration in the client, including the UUID, rejection of
+   a second blank key, and persistence after restart/upgrade/relocation, before
+   starting key copying or travel.
 3. Commit and push the intended changes when requested; the configured initial
    version is `0.1.0-alpha.1`. Create and push `v0.1.0-alpha.1` only when approved.
 4. Let the tag-triggered GitHub workflow compile and publish the artifact.

@@ -97,3 +97,24 @@ Client checkpoint (not established by headless tests):
 
 Use a disposable test world and fresh stacks. Items already contaminated with
 duplicated identity by an older build are not automatically repaired.
+
+### First-key registration checkpoint
+
+The suite also checks registration on all five anchor tiers, both hands, and
+survival/creative. It verifies one-time replacement, a second player's rejected
+attempt, key JSON/network serialization, invalid/missing data rejection, and
+preservation of registration through extraction, upgrade, serialized reload, and
+relocation. Deliberate invalid-state tests produce expected warning/error logs.
+
+Pending in-game confirmation:
+
+1. Place a new anchor, then right-click it with a blank key. Check that the item
+   becomes a registered key with `dimensionalanchors:registered_key` referencing
+   the anchor UUID. No room or teleportation is expected.
+2. Try another blank key on that anchor. It must remain unchanged and a rejection
+   message must appear.
+3. Extract the anchor: it must retain its UUID and now have `registered:1b`.
+4. Upgrade and relocate it, then save and reopen the world. A second blank key
+   must still be rejected, and the original key reference must remain unchanged.
+5. Repeat registration with the off hand and in creative. Only the hand used
+   changes; creative registration also replaces its blank key.
