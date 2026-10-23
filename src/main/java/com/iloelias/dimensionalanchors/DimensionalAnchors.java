@@ -68,9 +68,9 @@ public class DimensionalAnchors {
     public static final DeferredItem<Item> DIMENSIONAL_UPGRADE_TEMPLATE =
             ITEMS.registerSimpleItem("dimensional_upgrade_template");
     public static final DeferredItem<Item> DIMENSIONAL_KEY =
-            ITEMS.register("dimensional_key", () -> new Item(new Item.Properties().stacksTo(1)));
+            registerKeyItem("dimensional_key");
     public static final DeferredItem<Item> UNASSIGNED_DIMENSIONAL_KEY =
-            ITEMS.register("unassigned_dimensional_key", () -> new Item(new Item.Properties().stacksTo(1)));
+            registerKeyItem("unassigned_dimensional_key");
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CONTENTS_TAB =
             CREATIVE_MODE_TABS.register("contents", () -> CreativeModeTab.builder()
@@ -117,5 +117,15 @@ public class DimensionalAnchors {
 
     private static ResourceKey<Block> blockKey(String name) {
         return ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MODID, name));
+    }
+
+    private static DeferredItem<Item> registerKeyItem(String name) {
+        return ITEMS.register(name, () -> new Item(new Item.Properties()
+                .setId(itemKey(name))
+                .stacksTo(1)));
+    }
+
+    private static ResourceKey<Item> itemKey(String name) {
+        return ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MODID, name));
     }
 }
