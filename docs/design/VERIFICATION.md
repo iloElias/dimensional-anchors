@@ -278,7 +278,9 @@ completion prepares the room, and preparation failure gives explicit feedback,
 failure audio, no teleport, and the unchanged prototype cooldown. The deliberate
 obstruction case logs an expected room-preparation error.
 
-These new tests await CI. Event cancellation and loot queries do not simulate
+These generation tests passed in an explicitly authorized local baseline run
+(18 total GameTests), and again with the session-data additions (21 total).
+CI remains a separate check. Event cancellation and loot queries do not simulate
 actual client prediction or prove audible playback.
 
 Manual checkpoint in a disposable world, after CI passes:
@@ -309,3 +311,45 @@ Manual checkpoint in a disposable world, after CI passes:
 The control does not exit yet. Keep a command-based administrator return path;
 do not enable ordinary player entry. Safe landing, return-session persistence,
 movement enforcement, and hard-crash transactional recovery are not validated.
+
+### Player room session-data checkpoint
+
+[PlayerRoomTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/PlayerRoomTests.java)
+adds three GameTests:
+
+- Per-player entry, refusal to overwrite an existing exterior return,
+  room-to-room changes preserving that return, idempotent current-room selection,
+  stale-exit rejection, matching exit removal, and new exterior entry after exit.
+- Exact coordinates, yaw/pitch, dimension, and current room across codec and
+  compressed-NBT disk reload; separate players sharing a room remain independent.
+- Global storage across server dimensions; dirty-state updates; malformed UUIDs,
+  missing fields, invalid coordinates/rotations, pocket return destinations,
+  unsupported versions, corrupt files, and rejection of partial decoding without
+  overwriting existing session files.
+
+The session-data GameTests do not teleport players or simulate a network
+disconnect/reconnect. Disk reload proves persistence, not login reconciliation.
+There is no new manual gameplay path for sessions in this checkpoint; key use
+continues to prepare rooms without teleporting. Manual room-generation checks
+above remain necessary.
+
+### Safe-destination resolver checkpoint
+
+[SafeTravelTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/SafeTravelTests.java)
+adds three GameTests:
+
+- Default north-facing entry for all five room tiers, alternate interior landing
+  for obstructed entry, and explicit failure without block removal when every
+  interior position is filled.
+- Exact saved-position preservation, vanilla slab floor resolution, harmful
+  floors/body blocks, liquids, portal rejection, world-border rejection,
+  inclusion of four-block horizontal/vertical limits, and rejection beyond them.
+- Return priority: saved position before vanilla bed; obstructed/missing bed or
+  unavailable saved dimension falls back to Overworld spawn; charged Nether
+  respawn anchor is resolved without charge consumption, depleted anchor is
+  rejected, and total destination failure preserves the existing session.
+
+Tests call the resolver without teleporting. They do not establish network
+transition correctness, live reconnect recovery, all modded hazard behavior, or
+the player's eventual failure notification. Temporary world-spawn/border changes
+in tests are restored. The game world used is the disposable GameTest world.

@@ -34,4 +34,72 @@
 - Validate entry landing and return destinations; arbitrary saved coordinates are not automatically safe merely because respawn uses vanilla rules.
 - Handle blocked destinations, unavailable dimensions, unloaded chunks, invalid saved data, disconnections, and restarts for normal exit only.
 - Never report an unsafe return as successful or strand a player silently.
-- Nearby safe-position search bounds and spawn obstruction handling still require technical planning for normal exit.
+- The bounded search below is approved and implemented; integrating it with
+  normal exit and reporting failure to the player remains pending.
+
+## Implemented session-data foundation
+
+- `PlayerRoomSavedData` stores sessions by player UUID in the Overworld's
+  `dimensionalanchors:player_rooms` saved data, shared across dimensions.
+  Schema version 1 records the current room's anchor UUID and one exterior
+  destination (dimension, exact coordinates, yaw, and pitch).
+- Entering creates a session only if none exists; an unexpected second entry
+  fails instead of overwriting the original return. Changing rooms preserves
+  that return. Completing exit removes only the matching player's session and
+  rejects a stale exit for a room the player no longer occupies.
+- Sessions are not removed because an anchor is absent or because a player
+  disconnects. Disk reload preserves them, including separate occupants of the
+  same room. There are no login, respawn, or teleport hooks yet.
+- Return data rejects the pocket dimension, non-finite coordinates/rotation,
+  coordinates outside vanilla spawnable bounds, and invalid pitch. These are
+  structural checks, not proof of a safe destination. Other dimension IDs are
+  retained even when unavailable, so future return handling can use explicit
+  fallback rather than erase the session.
+- Strict decoding rejects corrupt, unsupported-version, and partially readable
+  stores without replacing them. The same saved-data safeguards are shared with
+  permanent room allocation.
+- This is a persistence API, not travel authorization or a teleport transaction.
+  No current gameplay path creates or changes a session. In particular, charging
+  a key only prepares the room, and administrator-command entry does not create
+  a session. A future travel service must validate lifecycle, actual location,
+  landing safety, and destination availability before using this API.
+- Integration of safe entry/return resolution, exit control behavior,
+  disconnect/reconnect reconciliation, death handling, and
+  ordering/rollback between session writes and teleportation remain pending.
+  No hard-crash atomicity between player position and saved data is claimed.
+
+## Implemented safe-destination resolver
+
+- Owner approved a non-destructive search: try the intended room entry first,
+  then other standing positions strictly within that room's usable interior.
+  Entry always faces north. A fully obstructed room fails rather than clearing
+  blocks, placing a platform, or selecting another reservation.
+- Exterior return tries the exact saved position first, preserving orientation.
+  If blocked, search at most four block coordinates horizontally on each axis
+  and four vertically around the saved block position (a 9-by-9-by-9 box).
+  Alternatives are ordered by distance, then Y/Z/X for deterministic ties.
+- The resolver reuses vanilla safe-dismount floor geometry, including slabs,
+  then checks the player's standing bounding box, collision, supporting ground,
+  dimension build height, and world border. Reject fluids, vanilla dangerous
+  blocks in the body/support footprint, invalid-spawn blocks, and portal blocks.
+  This is not a guarantee against arbitrary modded hazards or future world
+  changes; destinations must be resolved immediately before actual travel.
+- If the saved dimension is unavailable or no safe nearby return exists, try
+  vanilla personal-respawn resolution without consuming a respawn-anchor charge.
+  A missing, obstructed, depleted, or unavailable personal respawn falls back
+  to a bounded search around the Overworld's configured world-spawn position.
+  Never use the pocket dimension as a fallback.
+- A focused access transformer exposes vanilla's personal-respawn-only helper
+  and its result type. This preserves vanilla/modded respawn-block hooks without
+  invoking the public method's automatic, potentially wider world-spawn search.
+- Search loads only destination-area chunks on demand and adds no persistent
+  tickets. Room search considers at most 4,096 block candidates; each exterior
+  search considers at most 729. Personal respawn is queried locally at its block.
+- All unsafe outcomes raise an explicit error after fallbacks are exhausted.
+  Resolution does not teleport, consume resources, change blocks, or remove a
+  player session. The future travel service must show failure feedback and keep
+  the session when resolution fails.
+- `SafeTravelDestination` is not wired into key use or the exit control yet.
+  Room-generation client checks, session/teleport transaction handling,
+  reconciliation after reconnect/death, and movement enforcement are still
+  prerequisites for enabling playable travel.

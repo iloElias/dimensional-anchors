@@ -21,7 +21,8 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
   [dimension](DIMENSION.md#implemented-reservation-foundation).
 - Persistent identity, room lifecycle, region reservations, pending returns, and saved-data versioning.
 - Key-copy validation against illicit item duplication; copies themselves are unlimited, but item duplication must not corrupt room state.
-- Safe landing/return search bounds, unavailable dimensions, obstructed personal/world spawn, and bounded chunk loading.
+- Travel integration with the approved bounded safe-destination resolver:
+  unavailable dimensions, obstructed personal/world spawn, and failure feedback.
 - Custom crafting/smithing preservation and anvil input/XP/output handling in the exact target version.
 - Vanilla item-use behavior when receiving damage; no new anti-combat-logout system is approved.
 - Classification of commands, modded removal, qualifying modded tools, and invalid/orphaned saved data.
@@ -50,5 +51,10 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
   reject new allocations with explicit feedback; preserve existing reservations
   and do not reuse regions. Existing rooms remain accessible subject to their
   normal lifecycle rules.
+- Safe-destination search is non-destructive: default room entry, then only
+  positions inside that room; saved exterior return, then a four-block search
+  radius on each horizontal axis and vertically, vanilla personal respawn,
+  then bounded Overworld spawn search. If all fail, retain the session and
+  report failure. See [travel](TRAVEL.md#implemented-safe-destination-resolver).
 
 Implementation still requires explicit approval under the [workflow](VERIFICATION.md).

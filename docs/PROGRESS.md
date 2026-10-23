@@ -3,13 +3,93 @@
 **Date:** 2026-10-22  
 **Last updated:** 2026-10-23 (UTC-03:00)\
 **Configured version:** `0.1.0-alpha.1` (release tag: `v0.1.0-alpha.1`)  
-**Stage:** Physical room generation, expansion, and generated-boundary protection implemented in source; new CI and manual checks pending. Teleportation remains disabled.
+**Stage:** Safe entry/return resolution added; 24 local GameTests and build passed under explicit authorization. Manual room checks and CI remain separate; teleportation stays disabled.
 
 This report distinguishes changes present in the working tree from verified gameplay.
 It does not replace the [approved design](DESIGN_DECISIONS.md) or imply that the
 planned room mechanics are implemented.
 
+## Continuation handoff, 2026-10-23
+
+- Current checkpoint: player-session persistence and safe-destination resolution
+  are implemented; the latest authorized local build and all 24 GameTests passed.
+  These results do not establish manual room validation or remote CI success.
+- Key charging still prepares/expands a room without teleporting. No gameplay
+  path creates a player session or invokes the safe-destination resolver yet.
+- Next: implement a server-authoritative travel service and functional generated
+  exit control, integrating lifecycle checks, safe destinations, session updates,
+  explicit failure feedback, and teleport failure handling. Preserve the original
+  exterior return during room-to-room travel.
+- Before exposing entry, handle legitimate transitions, movement enforcement,
+  reconnect/death reconciliation, and keyless exit while an anchor is absent.
+  Do not enable a standalone entry teleport without a reliable exit path.
+- Session/resolver changes remain working-tree changes unless separately
+  committed. Transfer those files as well as this report when moving machines;
+  cloning only the last committed revision is insufficient.
+- Local build permission was checkpoint-specific. Follow contribution rules
+  and request authorization again for a new implementation stage.
+- Start a continuation by reading this report,
+  [travel](design/TRAVEL.md), and [verification](design/VERIFICATION.md), then
+  inspect the actual Git status and source before editing.
+
 ## Completed in source
+
+### Safe entry and return destination resolution
+
+- Owner approved the bounded, non-destructive search and explicitly authorized
+  local build/GameTests for this checkpoint.
+- Added `SafeTravelDestination`: prefer the normal north-facing room entry,
+  then search only that room's interior. For return, prefer exact saved
+  coordinates/orientation, then search four blocks horizontally per axis and
+  vertically, then vanilla personal respawn and bounded Overworld spawn.
+- Standing collision bounds, supporting floor, vanilla dismount floor geometry
+  (including slabs), fluids, dangerous/invalid-spawn blocks, portals, world
+  border, build height, and room bounds are checked without changing blocks.
+- Reused vanilla's personal-respawn-only helper through a focused access
+  transformer, passing `consumeSpawnBlock=false`. No respawn-anchor charges are
+  consumed and no automatic wider/randomized world-spawn search is invoked.
+- Missing dimensions, invalid/obstructed/depleted personal respawns, and blocked
+  destinations follow the fallback chain. Exhaustion throws an explicit error
+  without teleporting or removing the player's session.
+- Added three GameTests covering every room tier, blocked/full interiors, exact
+  coordinates, slabs/hazards/portals, radius endpoints, world borders, vanilla
+  bed and Nether respawn-anchor behavior, fallback priority, and unchanged
+  sessions after failure.
+- An initial test incorrectly expected a solid obstruction to make all nearby
+  positions unsafe; standing safely above it is allowed. Corrected that
+  assertion and verified actual partial-height support using the vanilla helper.
+- Final authorized command
+  `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon build runGameTestServer`
+  passed all 24 GameTests (23 mod tests plus one vanilla) and production build.
+- Resolver integration, player-visible failure messages, functional exit control,
+  teleport/session ordering, reconciliation, and movement enforcement remain
+  pending. The key still only prepares a room; no new player travel is enabled.
+
+### Player room session-data foundation
+
+- Owner approved continuing with session persistence while keeping teleportation
+  disabled, and explicitly authorized local build/GameTests for the current
+  generation baseline and this checkpoint.
+- Added `ExteriorReturn`, `PlayerRoomSession`, and server-global
+  `PlayerRoomSavedData`, schema version 1. Store the current room's anchor UUID
+  and the exact exterior dimension, coordinates, yaw, and pitch per player.
+- Entry refuses to replace an existing session. Room-to-room changes preserve
+  the first exterior return. Exit completion checks the expected current room
+  before removing only that player's session; new entry can then record a new
+  exterior return.
+- Return records reject pocket-dimension destinations, non-finite/out-of-bounds
+  coordinates, and invalid rotations. These checks do not establish landing
+  safety or dimension availability.
+- Shared the existing strict-decoding and fail-closed saved-data loading
+  safeguards with room allocation via `SavedDataSupport`. Malformed, future,
+  partial, or unreadable files cannot silently reset either authoritative store.
+- Added three GameTests for session lifecycle, player isolation, exact codec/disk
+  round trips, cross-dimension storage, stale operations, and invalid-file
+  preservation. Temporary disk-test files are removed after each test.
+- No gameplay hook creates sessions yet. Key charging still prepares rooms
+  without moving the player. Session/teleport ordering, safe destinations,
+  working exits, login/respawn reconciliation, and movement enforcement are
+  future integration tasks, not implemented behavior.
 
 ### Physical room generation and generated-boundary protection
 
@@ -191,20 +271,35 @@ not a final implementation of key states or survival availability.
 
 Local compilation and headless testing were explicitly authorized by the owner for the regression, first-key registration, anvil-copying, allocation/geometry, key-charging prototype, and empty-dimension tasks. Client results above were reported by the owner, not executed by the assistant. No published release or broader mod compatibility is claimed; the normal restriction on local compilation remains.
 
+The owner separately authorized local baseline and player-session build/GameTests
+on 2026-10-23 for this checkpoint; this is not a permanent change to contribution
+rules.
+The safe-destination resolver received a separate local-test authorization.
+
 The dedicated-server startup excerpt also shows RCON listening on `0.0.0.0:25575` and repeated short-lived IPv6 loopback client connections. These are informational entries, not server shutdowns; their originating process is not identified in the log. Host/container port exposure was not verified. Keep RCON restricted to trusted administration access, or disable it when unused. The INFO-level production-classpath fallback and skipped early display in headless mode are consistent with this dedicated-server launch.
 
 ### Room-generation validation status, 2026-10-23
 
 - Owner confirmed that CI passed after the `gameMode()` fix, before these room-generation changes. No exact command, test count, or run URL was supplied for that confirmation.
-- New room-generation changes: GameTests/build not run locally, as required by contribution rules; CI is pending. Manual generation, expansion, creative break/resynchronization, audible sounds, normal save/restart, and multiplayer checks are pending.
+- Room generation was initially untested locally under contribution rules. The
+  newly authorized baseline command
+  `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon build runGameTestServer`
+  passed all 18 GameTests and built the production JAR. CI is not established by
+  this local result.
+- The same command after adding session persistence passed all 21 GameTests
+  (20 mod tests plus one vanilla test) and the production build. The JAR includes
+  session classes and excludes GameTest classes.
+- Manual generation, expansion, creative break/resynchronization, audible
+  sounds, normal gameplay save/restart, and multiplayer checks remain pending.
+  Automated temporary-storage round trips are not manual gameplay confirmation.
 - Static validation: `git diff --check` and English translation JSON parsing passed; Git still emits the pre-existing invalid-attribute warning.
 
 ## Not implemented
 
 - Real key travel authorization, successful-teleport cooldown, and teleportation.
-- Safe entry into generated rooms and integration with real first-entry teleportation.
+- Integration of safe entry/return resolution with real teleportation and failure feedback.
 - Working exit controls and movement enforcement.
-- Destruction lifecycle handling and offline-player session handling.
+- Destruction lifecycle handling and login/respawn reconciliation of persisted sessions.
 
 ## Remaining decisions and artwork
 
@@ -221,6 +316,13 @@ Reported defects and investigation candidates are tracked in
 
 1. The owner confirmed the upgrade/identity client checkpoint. Keep the identified creative-destruction edge case tracked as DA-001; its fix is deferred.
 2. Key-copy UUIDs, shift-click, and restored anvil sound have owner confirmation. Key animation and the empty dimension checkpoint are also confirmed.
-3. Current implementation checkpoint: run CI and manually validate physical generation/expansion, generated-only protection, and save/restart preservation. Keep key teleportation disabled until safe entry/exit and player return persistence are ready.
-4. Record additional client sound/cooldown, existing-save, and multiplayer checks when performed; do not infer results from the current confirmations.
-5. Prepare a commit message for the accumulated changes. Commit, push, and release/tag operations require separate requests; none are performed by this documentation update.
+3. The authorized local generation baseline and session-data checkpoint passed.
+   Run CI and manually validate generation/expansion, generated-only protection,
+   and save/restart preservation.
+4. Bounded safe-entry/return search and fallbacks are implemented and tested.
+   Next, wire a travel service and working exit control with persistent
+   sessions. Keep key teleportation disabled until safe exits and legitimate
+   transitions/movement enforcement are ready.
+5. Record additional client sound/cooldown, existing-save, and multiplayer checks when performed; do not infer results from the current confirmations.
+6. Commit, push, and release/tag operations require separate requests; none were
+   performed in this checkpoint.

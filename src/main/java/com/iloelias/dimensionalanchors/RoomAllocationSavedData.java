@@ -1,6 +1,5 @@
 package com.iloelias.dimensionalanchors;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,10 +10,8 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 import com.mojang.datafixers.util.Either;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.BlockPos;
@@ -46,20 +43,7 @@ public final class RoomAllocationSavedData extends SavedData {
     ).apply(instance, (version, slots) -> new RoomAllocationSavedData(slots, Map.of())));
     private static final Codec<RoomAllocationSavedData> RAW_CODEC = Codec.either(CURRENT_CODEC, LEGACY_CODEC)
             .xmap(value -> value.map(data -> data, data -> data), Either::left);
-    public static final Codec<RoomAllocationSavedData> CODEC = RAW_CODEC.mapResult(new Codec.ResultFunction<>() {
-        @Override
-        public <T> DataResult<Pair<RoomAllocationSavedData, T>> apply(DynamicOps<T> ops, T input,
-                DataResult<Pair<RoomAllocationSavedData, T>> result) {
-            // SavedDataStorage accepts partial decodes; dropped reservations could cause overlap.
-            return result.error().isPresent()
-                    ? DataResult.error(() -> result.error().orElseThrow().message()) : result;
-        }
-
-        @Override
-        public <T> DataResult<T> coApply(DynamicOps<T> ops, RoomAllocationSavedData input, DataResult<T> result) {
-            return result;
-        }
-    });
+    public static final Codec<RoomAllocationSavedData> CODEC = SavedDataSupport.strictCodec(RAW_CODEC);
     public static final SavedDataType<RoomAllocationSavedData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(DimensionalAnchors.MODID, "room_allocations"),
             RoomAllocationSavedData::new, CODEC);
@@ -82,16 +66,7 @@ public final class RoomAllocationSavedData extends SavedData {
     }
 
     static RoomAllocationSavedData load(SavedDataStorage storage, Path dataDirectory) {
-        RoomAllocationSavedData loaded = storage.get(TYPE);
-        if (loaded != null) {
-            return loaded;
-        }
-        var file = TYPE.id().withSuffix(".dat").resolveAgainst(dataDirectory);
-        // Vanilla treats unreadable saved data as absent; never reset permanent reservations.
-        if (!Files.notExists(file)) {
-            throw new IllegalStateException("Cannot load room allocations; refusing to replace existing data: " + file);
-        }
-        return storage.computeIfAbsent(TYPE);
+        return SavedDataSupport.load(storage, dataDirectory, TYPE);
     }
 
     public OptionalInt find(UUID anchorId) {

@@ -1,0 +1,86 @@
+package com.iloelias.dimensionalanchors;
+
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.level.storage.SavedDataStorage;
+
+public final class PlayerRoomSavedData extends SavedData {
+    private static final int DATA_VERSION = 1;
+    private static final Codec<PlayerRoomSavedData> RAW_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Codec.intRange(DATA_VERSION, DATA_VERSION).fieldOf("data_version").forGetter(data -> DATA_VERSION),
+            Codec.unboundedMap(UUIDUtil.STRING_CODEC, PlayerRoomSession.CODEC)
+                    .fieldOf("sessions").forGetter(data -> data.sessions)
+    ).apply(instance, (version, sessions) -> new PlayerRoomSavedData(sessions)));
+    public static final Codec<PlayerRoomSavedData> CODEC = SavedDataSupport.strictCodec(RAW_CODEC);
+    public static final SavedDataType<PlayerRoomSavedData> TYPE = new SavedDataType<>(
+            Identifier.fromNamespaceAndPath(DimensionalAnchors.MODID, "player_rooms"),
+            PlayerRoomSavedData::new, CODEC);
+
+    private final Map<UUID, PlayerRoomSession> sessions;
+
+    private PlayerRoomSavedData() {
+        this(Map.of());
+    }
+
+    private PlayerRoomSavedData(Map<UUID, PlayerRoomSession> sessions) {
+        this.sessions = new HashMap<>(sessions);
+    }
+
+    public static PlayerRoomSavedData get(ServerLevel level) {
+        var server = level.getServer();
+        return load(server.overworld().getDataStorage(), server.getWorldPath(LevelResource.DATA));
+    }
+
+    static PlayerRoomSavedData load(SavedDataStorage storage, Path directory) {
+        return SavedDataSupport.load(storage, directory, TYPE);
+    }
+
+    public Optional<PlayerRoomSession> find(UUID playerId) {
+        return Optional.ofNullable(sessions.get(Objects.requireNonNull(playerId, "playerId")));
+    }
+
+    public void enter(UUID playerId, UUID anchorId, ExteriorReturn exteriorReturn) {
+        Objects.requireNonNull(playerId, "playerId");
+        var session = new PlayerRoomSession(anchorId, exteriorReturn);
+        if (sessions.putIfAbsent(playerId, session) != null) {
+            throw new IllegalStateException("Player already has a room session: " + playerId);
+        }
+        setDirty();
+    }
+
+    public void changeRoom(UUID playerId, UUID anchorId) {
+        var current = requireSession(playerId);
+        var next = new PlayerRoomSession(anchorId, current.exteriorReturn());
+        if (!next.equals(current)) {
+            sessions.put(playerId, next);
+            setDirty();
+        }
+    }
+
+    public void completeExit(UUID playerId, UUID expectedAnchorId) {
+        var current = requireSession(playerId);
+        if (!current.anchorId().equals(Objects.requireNonNull(expectedAnchorId, "expectedAnchorId"))) {
+            throw new IllegalStateException("Player changed rooms before exit completion: " + playerId);
+        }
+        sessions.remove(playerId);
+        setDirty();
+    }
+
+    private PlayerRoomSession requireSession(UUID playerId) {
+        return find(playerId).orElseThrow(() -> new IllegalStateException("Player has no room session: " + playerId));
+    }
+}

@@ -55,6 +55,18 @@ public final class AnchorRegressionTests {
     @SubscribeEvent
     public static void register(RegisterGameTestsEvent event) {
         var environment = event.registerEnvironment(id("anchor_regressions"));
+        register(event, "safe_room_entry", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), SafeTravelTests::entry);
+        register(event, "safe_nearby_destination", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), SafeTravelTests::nearby);
+        register(event, "safe_return_fallbacks", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), SafeTravelTests::returns);
+        register(event, "player_room_sessions", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomTests::lifecycle);
+        register(event, "player_room_invalid_data", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomTests::invalidData);
+        register(event, "player_room_disk", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomTests::disk);
         register(event, "upgrade_recipes", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRegressionTests::upgradeRecipes);
         register(event, "stack_placement", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
