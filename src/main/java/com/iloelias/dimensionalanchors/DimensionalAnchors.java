@@ -68,9 +68,9 @@ public class DimensionalAnchors {
     public static final DeferredItem<Item> DIMENSIONAL_UPGRADE_TEMPLATE =
             ITEMS.registerSimpleItem("dimensional_upgrade_template");
     public static final DeferredItem<Item> DIMENSIONAL_KEY =
-            ITEMS.registerSimpleItem("dimensional_key");
+            ITEMS.register("dimensional_key", () -> new Item(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> UNASSIGNED_DIMENSIONAL_KEY =
-            ITEMS.registerSimpleItem("unassigned_dimensional_key");
+            ITEMS.register("unassigned_dimensional_key", () -> new Item(new Item.Properties().stacksTo(1)));
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CONTENTS_TAB =
             CREATIVE_MODE_TABS.register("contents", () -> CreativeModeTab.builder()

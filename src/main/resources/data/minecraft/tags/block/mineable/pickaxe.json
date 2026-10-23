@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "dimensionalanchors:copper_dimensional_anchor",
+    "dimensionalanchors:iron_dimensional_anchor",
+    "dimensionalanchors:gold_dimensional_anchor",
+    "dimensionalanchors:diamond_dimensional_anchor",
+    "dimensionalanchors:netherite_dimensional_anchor"
+  ]
+}

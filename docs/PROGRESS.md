@@ -35,8 +35,11 @@ planned room mechanics are implemented.
   custom audio files or sound events are introduced.
 - Configured anchors with material block hardness and approved ore-equivalent
   blast resistance, requiring an iron-tier or better pickaxe to mine.
+- Added pickaxe mining tags and block loot tables so the correct tool is
+  recognized and anchors drop their corresponding item when harvested.
 - Configured boundary and exit blocks with bedrock hardness and blast
   resistance so they cannot be broken in survival.
+- Limited dimensional key stacks to one item.
 - Internal preview blocks currently use Stone sounds.
 
 The two key items and creative access to internal blocks are preview conveniences,
