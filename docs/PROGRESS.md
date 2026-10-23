@@ -179,7 +179,7 @@ not a final implementation of key states or survival availability.
 
 Local compilation and headless testing were explicitly authorized by the owner for the regression, first-key registration, anvil-copying, allocation/geometry, key-charging prototype, and empty-dimension tasks. Client results above were reported by the owner, not executed by the assistant. No published release or broader mod compatibility is claimed; the normal restriction on local compilation remains.
 
-The dedicated-server startup excerpt also shows RCON listening on `0.0.0.0:25575` and repeated short-lived IPv6 loopback client connections. These are informational entries, not server shutdowns; their originating process is not identified in the log. Host/container port exposure was not verified. Keep RCON restricted to trusted administration access, or disable it when unused. The INFO-level production-classpath fallback and skipped early display in headless mode are consistent with this dedicated-server launch.
+The dedicated-server startup excerpt also shows RCON listening on `181.215.45.114:25575` and repeated short-lived IPv6 loopback client connections. These are informational entries, not server shutdowns; their originating process is not identified in the log. Host/container port exposure was not verified. Keep RCON restricted to trusted administration access, or disable it when unused. The INFO-level production-classpath fallback and skipped early display in headless mode are consistent with this dedicated-server launch.
 
 ## Not implemented
 
