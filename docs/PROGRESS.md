@@ -73,8 +73,12 @@ planned room mechanics are implemented.
   new allocations at capacity, no region reuse, and local build/GameTests for
   this stage.
 - Added `RoomGeometry` with all five approved sizes, fixed floor, upward growth,
-  consistent odd/even rounding, south-wall control and default entry positions.
-  Maximum room shells occupy 18-by-18 footprints on a 32-block-spaced grid.
+  consistent odd/even rounding, a two-block boundary on all six faces, and
+  south-wall control and default entry positions. Maximum room shells occupy
+  20-by-20 footprints on a 32-block-spaced grid.
+- Generated-block protection is not implemented yet. Player-placed limiter and
+  exit blocks remain breakable in creative; future protection must distinguish
+  generated room boundaries from player-placed blocks.
 - Added server-global `RoomAllocationSavedData` in Overworld storage:
   UUID-to-slot mappings, idempotent reservations, a bounded append-only allocator,
   schema version 1, and no removal/reuse API.
@@ -276,6 +280,8 @@ not a final implementation of key states or survival availability.
 | Authorized key-charging prototype run: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; thirteen mod GameTests and one vanilla test passed (14 total), including exact 60-tick completion, early release, both hands/game modes, and server portal-trigger sound dispatch; production JAR built. Client animation/audio validation remains pending |
 | Key-charging cooldown follow-up: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; all 14 GameTests and production build passed, including 400-tick shared cooldown, blocked copies/other anchor keys, player isolation, and reuse after expiry |
 | Authorized empty-dimension run: `JAVA_HOME=/home/murilo/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2 bash ./gradlew --no-daemon runGameTestServer build` | Passed; fourteen mod GameTests and one vanilla test (15 total), including real pocket-dimension loading, End settings comparison, production-resource parity, and three generated air-only chunks; production JAR built |
+| Boundary geometry checkpoint, 2026-10-23 | Added two-block geometry assertions. Generated-block protection awaits room generation so player-placed blocks remain breakable in creative. Not run: local compilation is prohibited by project contribution rules; CI result is pending |
+| `git diff --check` after boundary geometry changes | No whitespace errors reported; Git emitted the existing invalid-attribute warning from `.gitattributes` |
 | Owner's in-game report: anvil key copies and sound | Matching original/copy UUIDs, shift-click copying, and restored anvil completion sound confirmed |
 | Owner's in-game report, 2026-10-23: key charging animation | Confirmed to behave exactly as requested; no separate sound/cooldown result inferred |
 | Owner's in-game report, 2026-10-23: empty shared dimension | Reported working correctly after the spectator-entry checkpoint; detailed environment, existing-save, and multiplayer checks were not individually reported |

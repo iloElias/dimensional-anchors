@@ -53,6 +53,13 @@ These requirements consolidate the original and subsequent plans. They are not c
 - Verify all five interior sizes, fixed-floor upward growth, consistent horizontal rounding, and unchanged existing builds near boundaries.
 - Move the south-wall door and north-facing entry together; handle blocked landing positions.
 - Reserve non-overlapping maximum-size regions and generate only on first access.
+- Verify the two-block boundary thickness on all six faces and ensure room
+  reservations contain it without overlap.
+- Verify player-placed limiter and exit blocks remain breakable in creative.
+  Once room generation exists, verify generated boundary blocks reject player
+  break attempts in survival and creative without drops; do not infer generated
+  status from block identity alone. Continue testing commands, explosions,
+  pistons, fluids/fire, and modded bypasses separately.
 - Exercise boundary mining/replacement, explosions, piston/fluid/fire mechanics, pearls, other teleports, flight, knockback, commands, and relevant modded behavior.
 - Verify exact boundary death message `<player> tried to access places beyond imagination`, normal death consequences, no false wall deaths, and no repeated/recursive deaths.
 - Distinguish legitimate exits/internal teleports from violations; test login, respawn, invalid coordinates, and client position manipulation.

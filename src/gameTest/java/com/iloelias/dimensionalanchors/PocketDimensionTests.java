@@ -82,5 +82,6 @@ final class PocketDimensionTests {
                     .is(biomeKey), "Generated chunk contains another biome");
             helper.assertTrue(chunk.getAllStarts().isEmpty(), "Generated chunk contains structure starts");
         }
+
     }
 }

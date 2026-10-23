@@ -46,9 +46,10 @@ still require [technical planning](OPEN_QUESTIONS.md).
 - The approved cap is 4,096 rooms per world, laid out as a 64-by-64 grid.
   Slot `s` has reference X=`(s % 64) * 32 + 16` and
   Z=`floor(s / 64) * 32 + 16`.
-- References are 32 blocks apart, not four chunks. Each maximum room requires
-  an 18-by-18 horizontal footprint including walls, leaving 14 blocks between
-  neighboring shells. No view-distance restriction is introduced.
+- References are 32 blocks apart, not four chunks. Each maximum room requires a
+  20-by-20 horizontal footprint including its two-block-thick boundary, leaving
+  12 blocks between neighboring shells. No view-distance restriction is
+  introduced.
 - `RoomAllocationSavedData` stores UUID-to-slot mappings in the Overworld's
   saved-data storage, shared by requests from every dimension. Existing
   dimension-local anchor records are not migrated or otherwise changed here.

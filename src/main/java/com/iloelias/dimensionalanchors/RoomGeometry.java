@@ -10,6 +10,7 @@ public record RoomGeometry(int slot, AnchorTier tier) {
     public static final int CAPACITY = GRID_WIDTH * GRID_WIDTH;
     public static final int CELL_SIZE = 32;
     public static final int FLOOR_Y = 63;
+    public static final int BOUNDARY_THICKNESS = 2;
 
     public RoomGeometry {
         if (slot < 0 || slot >= CAPACITY) {
@@ -44,7 +45,7 @@ public record RoomGeometry(int slot, AnchorTier tier) {
     }
 
     public BoundingBox shell() {
-        return interior().inflatedBy(1);
+        return interior().inflatedBy(BOUNDARY_THICKNESS);
     }
 
     public BoundingBox reservation() {
@@ -56,6 +57,6 @@ public record RoomGeometry(int slot, AnchorTier tier) {
     }
 
     public BlockPos exitControl() {
-        return new BlockPos(reference().getX(), FLOOR_Y + 2, shell().maxZ());
+        return new BlockPos(reference().getX(), FLOOR_Y + 2, interior().maxZ() + 1);
     }
 }

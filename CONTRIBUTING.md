@@ -9,7 +9,7 @@ Contributions should be focused, reviewable, and consistent with the topic docum
 - Keep changes limited to the issue or behavior being addressed; avoid unrelated cleanup.
 - Do not add, generate, or edit sprite PNG files. Asset art is supplied by the project owner.
 - Do not claim compatibility or test results that have not been verified.
-- Do not compile the mod locally. Builds and release artifacts are produced by the GitHub Actions workflow on `v*` tag pushes; use lightweight static checks locally.
+- Do not compile the mod locally. Pull/merge requests run the `Build and GameTests` GitHub Actions check; release artifacts are produced by the separate workflow on `v*` tag pushes. Use lightweight static checks locally.
 
 ## Commit messages
 
@@ -57,5 +57,6 @@ Before submitting, confirm that:
 - Documentation and tests are updated when behavior changes.
 - No unrelated generated files, build outputs, or unapproved assets are included.
 - The diff is focused and the request is ready for review.
+- The `Build and GameTests` check passes. Repository maintainers should require this status check in the default branch's ruleset or branch protection settings to block merging when it fails.
 
 Submitting a request does not grant permission to redistribute the mod outside the terms of [LICENSE](LICENSE).

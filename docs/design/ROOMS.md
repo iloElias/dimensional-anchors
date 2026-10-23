@@ -37,9 +37,9 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
 
 ## Boundary protection
 
-- Enclose all six sides with persistent, indestructible custom boundary blocks that drop no items and are unavailable for ordinary players to obtain/place.
-- Enforce protection server-side, not through collision or rendering alone.
-- Investigate mining/replacement, explosions, pistons, fluids/fire, pearls/teleports, flight/knockback, ordinary-player commands, and modded bypasses.
+- Enclose all six sides with persistent, indestructible custom boundary blocks at least two blocks thick. Generated blocks drop no items. Players may break the same block types they placed in creative; generated room boundaries remain protected even in creative.
+- Enforce protection server-side, not through collision or rendering alone. Distinguish generated boundary blocks from player-placed blocks; block identity and dimension alone are insufficient. Commands, non-player block changes, and modded bypasses remain separate protection cases.
+- Verify manually that player-placed limiter and exit blocks can be broken in creative. Once rooms are generated, verify generated boundary blocks cannot be broken in survival or creative and drop no items. Also investigate explosions, pistons, fluids/fire, pearls/teleports, flight/knockback, ordinary-player commands, and modded bypasses.
 - If a player leaves the permitted interior through unauthorized movement/teleportation, kill that player immediately with:
 
 ```text
@@ -62,12 +62,12 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
   are `(x - floor(n/2), z - floor(n/2))`; maximums are minimums plus `n - 1`.
   Even sizes extend one extra block north/west. All successive interiors contain
   the preceding interior without moving existing coordinates.
-- The shell extends one block beyond the interior on all six sides.
+- The shell extends two blocks beyond the interior on all six sides. The south-wall control block occupies the inner boundary layer, one block behind the entry.
 - The intended entry feet position is at reference X, Y=64, and the southernmost
   interior Z. The single control position is one block south and one block above
-  those feet, in the south wall. Future entry faces north.
+  those feet, in the inner layer of the south wall. Future entry faces north.
 - These are default coordinates, not proof of a safe landing after construction.
-  Obstruction checks, physical wall/control behavior, and protected expansion are
+  Obstruction checks, physical wall/control behavior, and generated-block protection are
   still pending. No teleportation uses these coordinates yet.
 
 Safe entry placement and migration remain in [open questions](OPEN_QUESTIONS.md).

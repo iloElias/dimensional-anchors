@@ -50,6 +50,10 @@ final class RoomAllocationTests {
                 helper.assertTrue(control.getX() == feet.getX() && control.getZ() == feet.getZ() + 1
                         && control.getY() == feet.getY() + 1 && shell.isInside(control)
                         && !interior.isInside(control), "Control is not in the south wall behind entry");
+                helper.assertTrue(shell.getXSpan() == size + RoomGeometry.BOUNDARY_THICKNESS * 2
+                        && shell.getYSpan() == size + RoomGeometry.BOUNDARY_THICKNESS * 2
+                        && shell.getZSpan() == size + RoomGeometry.BOUNDARY_THICKNESS * 2,
+                        "Boundary thickness changed");
                 previous = interior;
             }
             regions.add(new RoomGeometry(slot, AnchorTier.NETHERITE).reservation());
