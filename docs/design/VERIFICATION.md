@@ -59,3 +59,41 @@ These requirements consolidate the original and subsequent plans. They are not c
 - Check dedicated-server multiplayer, fixed tier dimensions, no unbounded world scans/ticking/allocation, and no unnecessary inactive-room chunk loading.
 
 Do not claim compatibility or a passed check without executing and inspecting the relevant evidence. Documentation organization alone requires no game build.
+
+## Implemented anchor regression tests
+
+The focused headless suite is in
+[AnchorRegressionTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/AnchorRegressionTests.java).
+It exercises real registered recipes and server placement, rather than substituting
+JSON parsing or source-shape checks for gameplay assertions.
+
+Run on CI, or locally only with explicit owner authorization:
+
+```sh
+bash ./gradlew --no-daemon runGameTestServer build
+```
+
+Use Java 25. The release workflow runs the GameTests before publication; test
+classes are excluded from the installable JAR. See [progress](../PROGRESS.md)
+for commands actually run and results.
+
+Covered: all four upgrades, valid/invalid ingredients and grids, identity and
+registration transfer, deterministic result previews, vanilla/JEI display
+metadata, JSON/network codec round trips, five-item survival/creative placement,
+failed placement, upgraded extraction, and saved-data round trips.
+
+Client checkpoint (not established by headless tests):
+
+1. Check Copper, Iron, Gold, Diamond, and Netherite recipes in JEI. The last four
+   must show the approved upgrade ingredients and one result.
+2. Craft five new Copper anchors, place them consecutively in survival, and
+   verify that the held count decreases by one without inventory rollback.
+3. Collect the placed anchors and compare `dimensionalanchors:anchor_data`:
+   each independent anchor must have a distinct `anchor_id`.
+4. Upgrade an identified anchor through every tier, place and collect it after
+   each upgrade, and verify unchanged UUID/registration and the new tier.
+5. Repeat fresh-item placement in creative; the held stack must remain reusable
+   and must not receive the placed block's UUID.
+
+Use a disposable test world and fresh stacks. Items already contaminated with
+duplicated identity by an older build are not automatically repaired.

@@ -48,6 +48,9 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew --no-daemon -Pmod_version="${{ steps.coordinates.outputs.mod_version }}" build
 
+      - name: Run anchor regression GameTests
+        run: ./gradlew --no-daemon -Pmod_version="${{ steps.coordinates.outputs.mod_version }}" runGameTestServer
+
       - name: Collect release files
         id: artifacts
         shell: bash

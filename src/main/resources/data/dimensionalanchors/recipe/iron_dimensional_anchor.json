@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "dimensionalanchors:anchor_upgrade",
   "category": "building",
   "key": {
     "I": "minecraft:iron_ingot",

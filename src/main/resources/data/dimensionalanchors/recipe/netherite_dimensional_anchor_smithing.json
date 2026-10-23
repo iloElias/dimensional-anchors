@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:smithing_transform",
+  "type": "dimensionalanchors:anchor_netherite_upgrade",
   "template": "dimensionalanchors:dimensional_upgrade_template",
   "base": "dimensionalanchors:diamond_dimensional_anchor",
   "addition": "minecraft:netherite_ingot",

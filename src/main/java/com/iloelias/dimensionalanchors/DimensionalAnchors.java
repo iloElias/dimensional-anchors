@@ -3,6 +3,8 @@ package com.iloelias.dimensionalanchors;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -10,6 +12,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.SmithingTransformRecipe;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -29,19 +33,24 @@ public class DimensionalAnchors {
 
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
+    public static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS =
+            DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
+    public static final DeferredRegister.DataComponents DATA_COMPONENTS =
+            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
     public static final DeferredBlock<Block> COPPER_DIMENSIONAL_ANCHOR =
-            registerAnchor("copper_dimensional_anchor", Blocks.COPPER_BLOCK, Blocks.COPPER_ORE);
+            registerAnchor("copper_dimensional_anchor", AnchorTier.COPPER, Blocks.COPPER_BLOCK, Blocks.COPPER_ORE);
     public static final DeferredBlock<Block> IRON_DIMENSIONAL_ANCHOR =
-            registerAnchor("iron_dimensional_anchor", Blocks.IRON_BLOCK, Blocks.IRON_ORE);
+            registerAnchor("iron_dimensional_anchor", AnchorTier.IRON, Blocks.IRON_BLOCK, Blocks.IRON_ORE);
     public static final DeferredBlock<Block> GOLD_DIMENSIONAL_ANCHOR =
-            registerAnchor("gold_dimensional_anchor", Blocks.GOLD_BLOCK, Blocks.GOLD_ORE);
+            registerAnchor("gold_dimensional_anchor", AnchorTier.GOLD, Blocks.GOLD_BLOCK, Blocks.GOLD_ORE);
     public static final DeferredBlock<Block> DIAMOND_DIMENSIONAL_ANCHOR =
-            registerAnchor("diamond_dimensional_anchor", Blocks.DIAMOND_BLOCK, Blocks.DIAMOND_ORE);
+            registerAnchor("diamond_dimensional_anchor", AnchorTier.DIAMOND, Blocks.DIAMOND_BLOCK, Blocks.DIAMOND_ORE);
     public static final DeferredBlock<Block> NETHERITE_DIMENSIONAL_ANCHOR =
-            registerAnchor("netherite_dimensional_anchor", Blocks.NETHERITE_BLOCK, Blocks.ANCIENT_DEBRIS);
+            registerAnchor("netherite_dimensional_anchor", AnchorTier.NETHERITE,
+                    Blocks.NETHERITE_BLOCK, Blocks.ANCIENT_DEBRIS);
 
     public static final DeferredBlock<Block> DIMENSIONAL_LIMITER_BLOCK =
             registerUtilityBlock("dimensional_limiter_block");
@@ -49,28 +58,45 @@ public class DimensionalAnchors {
             registerUtilityBlock("dimensional_exit_block");
 
     public static final DeferredItem<BlockItem> COPPER_DIMENSIONAL_ANCHOR_ITEM =
-            ITEMS.registerSimpleBlockItem("copper_dimensional_anchor", COPPER_DIMENSIONAL_ANCHOR);
+            registerAnchorItem("copper_dimensional_anchor", COPPER_DIMENSIONAL_ANCHOR);
     public static final DeferredItem<BlockItem> IRON_DIMENSIONAL_ANCHOR_ITEM =
-            ITEMS.registerSimpleBlockItem("iron_dimensional_anchor", IRON_DIMENSIONAL_ANCHOR);
+            registerAnchorItem("iron_dimensional_anchor", IRON_DIMENSIONAL_ANCHOR);
     public static final DeferredItem<BlockItem> GOLD_DIMENSIONAL_ANCHOR_ITEM =
-            ITEMS.registerSimpleBlockItem("gold_dimensional_anchor", GOLD_DIMENSIONAL_ANCHOR);
+            registerAnchorItem("gold_dimensional_anchor", GOLD_DIMENSIONAL_ANCHOR);
     public static final DeferredItem<BlockItem> DIAMOND_DIMENSIONAL_ANCHOR_ITEM =
-            ITEMS.registerSimpleBlockItem("diamond_dimensional_anchor", DIAMOND_DIMENSIONAL_ANCHOR);
+            registerAnchorItem("diamond_dimensional_anchor", DIAMOND_DIMENSIONAL_ANCHOR);
     public static final DeferredItem<BlockItem> NETHERITE_DIMENSIONAL_ANCHOR_ITEM =
-            ITEMS.registerSimpleBlockItem("netherite_dimensional_anchor", NETHERITE_DIMENSIONAL_ANCHOR);
+            registerAnchorItem("netherite_dimensional_anchor", NETHERITE_DIMENSIONAL_ANCHOR);
     public static final DeferredItem<BlockItem> DIMENSIONAL_LIMITER_BLOCK_ITEM =
             ITEMS.registerSimpleBlockItem("dimensional_limiter_block", DIMENSIONAL_LIMITER_BLOCK);
     public static final DeferredItem<BlockItem> DIMENSIONAL_EXIT_BLOCK_ITEM =
             ITEMS.registerSimpleBlockItem("dimensional_exit_block", DIMENSIONAL_EXIT_BLOCK);
 
     public static final DeferredItem<Item> DIMENSIONAL_CATALYST =
-            ITEMS.registerSimpleItem("dimensional_catalyst");
+            ITEMS.register("dimensional_catalyst", () -> new Item(new Item.Properties()
+                    .setId(itemKey("dimensional_catalyst"))
+                    .component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)));
     public static final DeferredItem<Item> DIMENSIONAL_UPGRADE_TEMPLATE =
             ITEMS.registerSimpleItem("dimensional_upgrade_template");
     public static final DeferredItem<Item> DIMENSIONAL_KEY =
             registerKeyItem("dimensional_key");
     public static final DeferredItem<Item> UNASSIGNED_DIMENSIONAL_KEY =
             registerKeyItem("unassigned_dimensional_key");
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<AnchorItemData>> ANCHOR_ITEM_DATA =
+            DATA_COMPONENTS.registerComponentType("anchor_data", builder -> builder
+                    .persistent(AnchorItemData.CODEC)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.fromCodec(AnchorItemData.CODEC)));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<RegisteredKeyData>> REGISTERED_KEY_DATA =
+            DATA_COMPONENTS.registerComponentType("registered_key", builder -> builder
+                    .persistent(RegisteredKeyData.CODEC)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.fromCodec(RegisteredKeyData.CODEC)));
+    public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>, net.minecraft.world.item.crafting.RecipeSerializer<ShapedRecipe>>
+            ANCHOR_UPGRADE_SERIALIZER = RECIPE_SERIALIZERS.register("anchor_upgrade",
+                    () -> AnchorUpgradeRecipe.SERIALIZER);
+    public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>, net.minecraft.world.item.crafting.RecipeSerializer<SmithingTransformRecipe>>
+            ANCHOR_NETHERITE_UPGRADE_SERIALIZER = RECIPE_SERIALIZERS.register("anchor_netherite_upgrade",
+                    () -> AnchorNetheriteUpgradeRecipe.SERIALIZER);
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CONTENTS_TAB =
             CREATIVE_MODE_TABS.register("contents", () -> CreativeModeTab.builder()
@@ -94,17 +120,34 @@ public class DimensionalAnchors {
     public DimensionalAnchors(IEventBus modEventBus, ModContainer modContainer) {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
+        DATA_COMPONENTS.register(modEventBus);
+        RECIPE_SERIALIZERS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
     }
 
     private static DeferredBlock<Block> registerAnchor(
-            String name, Block soundReference, Block explosionResistanceReference) {
-        return BLOCKS.register(name, () -> new Block(BlockBehaviour.Properties.of()
+            String name, AnchorTier tier, Block soundReference, Block explosionResistanceReference) {
+        return BLOCKS.register(name, () -> new AnchorBlock(tier, BlockBehaviour.Properties.of()
                 .setId(blockKey(name))
                 .mapColor(MapColor.METAL)
                 .strength(soundReference.defaultDestroyTime(), explosionResistanceReference.getExplosionResistance())
                 .requiresCorrectToolForDrops()
                 .sound(soundReference.defaultBlockState().getSoundType())));
+    }
+
+    private static DeferredItem<BlockItem> registerAnchorItem(String name, DeferredBlock<Block> block) {
+        return ITEMS.register(name, () -> new AnchorBlockItem(block.get(),
+                new Item.Properties().setId(itemKey(name))));
+    }
+
+    public static DeferredItem<BlockItem> anchorItem(AnchorTier tier) {
+        return switch (tier) {
+            case COPPER -> COPPER_DIMENSIONAL_ANCHOR_ITEM;
+            case IRON -> IRON_DIMENSIONAL_ANCHOR_ITEM;
+            case GOLD -> GOLD_DIMENSIONAL_ANCHOR_ITEM;
+            case DIAMOND -> DIAMOND_DIMENSIONAL_ANCHOR_ITEM;
+            case NETHERITE -> NETHERITE_DIMENSIONAL_ANCHOR_ITEM;
+        };
     }
 
     private static DeferredBlock<Block> registerUtilityBlock(String name) {
