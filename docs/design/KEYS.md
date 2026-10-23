@@ -53,6 +53,12 @@ Combine a registered key in the first input with a blank key in the second input
 
 ## Loss and appearance
 
+- Gray tooltips describe blank-key registration and registered-key charge/return
+  use. Registered keys display their linked anchor UUID only while Shift is
+  held. Unlinked creative-preview keys explicitly say they are unlinked. While
+  gameplay entry is disabled, linked-key tooltips also state that limitation;
+  remove the notice only when entry is actually enabled.
+
 - Use a previously created copy if a key is lost.
 - If every key is lost, entry becomes unavailable. No keyless recovery, replacement issuance, or registration reset is provided.
 - Losing keys does not delete the room or invoke destruction death. Occupants can still leave through the south-wall control block without a key.

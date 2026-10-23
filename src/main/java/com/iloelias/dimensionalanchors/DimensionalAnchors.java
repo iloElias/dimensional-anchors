@@ -135,6 +135,7 @@ public class DimensionalAnchors {
         NeoForge.EVENT_BUS.addListener(RoomMovementEnforcement::onTick);
         NeoForge.EVENT_BUS.addListener(RoomMovementEnforcement::onLogout);
         NeoForge.EVENT_BUS.addListener(AnchorRecoveryCommand::register);
+        NeoForge.EVENT_BUS.addListener(ItemDescriptions::append);
     }
 
     private static DeferredBlock<Block> registerAnchor(

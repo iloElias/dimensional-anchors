@@ -3,7 +3,7 @@
 **Date:** 2026-10-22  
 **Last updated:** 2026-10-23 (UTC-03:00)\
 **Configured version:** `0.1.0-alpha.1` (release tag: `v0.1.0-alpha.1`)  
-**Stage:** Administrative anchor recovery added; authorized build and all 51 GameTests passed. Entry remains disabled; player-transition recovery and both approved entry routes are the next implementation stages.
+**Stage:** Item descriptions added; authorized build and all 52 GameTests passed. Entry remains disabled; player-transition recovery and both approved entry routes are the next implementation stages.
 
 This report distinguishes changes present in the working tree from verified gameplay.
 It does not replace the [approved design](DESIGN_DECISIONS.md) or imply that the
@@ -11,6 +11,19 @@ planned room mechanics are implemented.
 
 ## Continuation handoff, 2026-10-23
 
+- Latest presentation checkpoint: gray localized item descriptions immediately
+  below the name show each anchor tier's usable interior dimensions, blank-key
+  registration instructions, and two separate registered-key travel/return
+  lines. Linked keys also explicitly state that entry is not yet enabled.
+  The anchor UUID is shown only with Shift on identity-bearing anchor/key items;
+  pristine anchors do not allocate an identity and unlinked preview keys report
+  that they are unlinked. No lifecycle lookup or client-only class is needed.
+- Validation command:
+  `JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+  Result: `BUILD SUCCESSFUL in 33s`, all 52 required tests passed (51 mod and one
+  vanilla), including real tooltip generation with null-player and Shift/
+  normal/advanced flags. Actual client rendering and modifier input remain
+  pending in [TO_TEST](TO_TEST.md), TT-073/TT-074. No installation or client launch.
 - Latest checkpoint: `/dimensionalanchors recover <uuid>` is registered with
   administrator permission and a player-only inventory recipient. It gives one
   item with recorded UUID/tier/registration, never a key or player rescue.

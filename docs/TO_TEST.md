@@ -156,6 +156,13 @@ Rows blocked on future implementation must not be interpreted as playable featur
 | TT-071 | Implement both approved entry routes and A-to-B travel with source rollback and fixed exterior return. | Remote-use position versus safe block-front return captured at entry; original exterior return survives A-to-B; no entry without matching key or placed anchor. | Blocked | Entry/facing/room-change integration remains disabled. |
 | TT-072 | Track actual safe exterior respawns; exercise current respawn, historical safe spawn, exterior return and Overworld exhaustion. Include pocket occupant without session and explicit retry. | Revalidate ordered fallbacks; rescue without arbitrary room assignment; failed recovery preserves state and has an explicit bounded retry route. | Blocked | Approved historical-spawn/rescue/retry behavior is not implemented by the anchor recovery command. |
 
+## Item description checkpoint
+
+| ID | Check / procedure | Expected result | Status | Latest evidence |
+| --- | --- | --- | --- | --- |
+| TT-073 | Run `item_descriptions` using real item tooltip generation with a null player, all anchor tiers, blank/linked/unlinked keys, Shift and normal/advanced flags. | Gray descriptions directly below name; correct usable interior sizes; separate key instruction lines; UUID only with Shift and only if identity exists; vanilla items unchanged. | Passed | E-2026-10-23-TOOLTIP52: current uncommitted tooltip working tree, version 0.1.0-alpha.1; `JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`: BUILD SUCCESSFUL in 33s, all 52 tests passed (51 mod, one vanilla). |
+| TT-074 | Inspect tooltips in inventory, creative search, recipe viewers and alternate UI scales; hold/release Shift on extracted/recovered/upgraded anchors and copied keys. | Descriptions readable, exact shared UUID on demand, no dedicated-server/client class errors; current entry-disabled notice remains truthful. | Pending | Manual client checks not performed; English localization added, other languages use fallback. |
+
 ## Existing feature regression and manual backlog
 
 | ID | Check / procedure | Expected result | Status | Latest evidence |

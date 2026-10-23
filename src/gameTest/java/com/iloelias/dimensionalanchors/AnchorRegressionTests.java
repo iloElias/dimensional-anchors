@@ -55,6 +55,8 @@ public final class AnchorRegressionTests {
     @SubscribeEvent
     public static void register(RegisterGameTestsEvent event) {
         var environment = event.registerEnvironment(id("anchor_regressions"));
+        register(event, "item_descriptions", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), ItemDescriptionTests::tooltips);
         register(event, "recover_anchor_tiers", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRecoveryTests::recoverTiers);
         register(event, "recover_command_failures", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),

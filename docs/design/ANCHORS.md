@@ -4,6 +4,10 @@
 
 ## Identity and activation
 
+- Item tooltips describe the usable interior size for their tier, in gray below
+  the name. Holding Shift shows the anchor UUID when the item already has one;
+  pristine items do not allocate an identity just to display a tooltip.
+
 - An anchor is a block associated with one persistent room, not a portable key.
 - Tiers are Copper, Iron, Gold, Diamond, and Netherite. Each has an inventory item form for extraction, placement, and upgrades.
 - Independently created anchors must have distinct room identities, independent of player UUIDs.

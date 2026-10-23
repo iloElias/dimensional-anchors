@@ -533,3 +533,19 @@ checks loaded server dimensions and refuses conflicting placed records. No
 player-session recovery, transition journal, historical-spawn tracking or entry
 route is implemented by this checkpoint. See [approved recovery policy](TRAVEL.md#approved-interrupted-transition-policy-2026-10-23)
 and [TO_TEST](../TO_TEST.md).
+
+### Item tooltip checkpoint
+
+`item_descriptions` invokes real `ItemStack.getTooltipLines` and the registered
+NeoForge tooltip event with a null player, all five anchor tiers, blank/linked/
+unlinked keys, normal/advanced flags and an explicit Shift flag. It checks
+description order, exact dimensions, gray styling, two separate key instructions,
+the truthful entry-disabled notice, conditional UUID visibility, no generated
+UUID for pristine anchors, and unchanged vanilla stone tooltip.
+
+Command:
+`JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-25-amd64-linux.2" bash ./gradlew --no-daemon --no-parallel --max-workers=1 build runGameTestServer`.
+Result on 2026-10-23: `BUILD SUCCESSFUL in 33s`, all 52 required tests passed
+(51 mod and one vanilla). Actual keyboard modifier input, rendered layout,
+creative search and recipe-viewer presentation remain manual checks. No
+installation, client launch or remote CI was performed.
