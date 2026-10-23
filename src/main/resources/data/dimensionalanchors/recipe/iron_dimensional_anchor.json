@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "A": "dimensionalanchors:copper_dimensional_anchor"
+  },
+  "pattern": [
+    "III",
+    "IAI",
+    "III"
+  ],
+  "result": {
+    "id": "dimensionalanchors:iron_dimensional_anchor"
+  }
+}

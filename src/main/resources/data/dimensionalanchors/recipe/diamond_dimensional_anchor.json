@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "D": "minecraft:diamond",
+    "A": "dimensionalanchors:gold_dimensional_anchor"
+  },
+  "pattern": [
+    "DDD",
+    "DAD",
+    "DDD"
+  ],
+  "result": {
+    "id": "dimensionalanchors:diamond_dimensional_anchor"
+  }
+}

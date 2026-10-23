@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "D": "dimensionalanchors:dimensional_catalyst"
+  },
+  "pattern": [
+    "IDI",
+    " I ",
+    " II"
+  ],
+  "result": {
+    "id": "dimensionalanchors:unassigned_dimensional_key"
+  }
+}

@@ -40,6 +40,8 @@ planned room mechanics are implemented.
 - Configured boundary and exit blocks with bedrock hardness and blast
   resistance so they cannot be broken in survival.
 - Limited dimensional key stacks to one item.
+- Registered the approved catalyst, anchor progression, template, Netherite
+  smithing, and blank-key recipes.
 - Internal preview blocks currently use Stone sounds.
 
 The two key items and creative access to internal blocks are preview conveniences,
