@@ -59,6 +59,22 @@ Combine a registered key in the first input with a blank key in the second input
 
 The [blank-key recipe](RECIPES.md) is approved. Whether states use distinct item registrations and whether copies need individual identifiers remain technical choices.
 
+## Planned handle colors (deferred)
+
+Approved for future work; not implemented in the current checkpoint.
+
+- Combine one dimensional key with one dye in the crafting table to produce one
+  key with a handle matching that dye's color. Support all 16 vanilla dye colors.
+- Both blank and registered keys can be colored.
+- Preserve the visual distinction between blank and registered sprites for each
+  color: two visual variants per color, not necessarily separate item types or
+  individual texture files.
+- Coloring must preserve registration state, the linked anchor UUID when present,
+  and non-color item data. It does not register, copy, or grant additional access.
+- Implementation and artwork are deferred. Recipe layout, recoloring an already
+  colored key, color retention during registration, and which input supplies the
+  color during anvil copying remain undecided.
+
 ## Current implementation checkpoint
 
 Blank and registered states use separate item registrations. Right-click a placed
@@ -68,8 +84,9 @@ anchor's registration flag. Further blank-key attempts leave the key unchanged.
 The key stores `dimensionalanchors:registered_key`, containing the anchor UUID;
 the extracted anchor's `dimensionalanchors:anchor_data` retains `registered=true`.
 
-This checkpoint only implements identity registration. It does not generate a
-room, teleport the player, enable anvil copying, or show anchor availability.
+This checkpoint implements identity registration, anvil copying, and a charging
+prototype. It does not
+generate a room, teleport the player, or show anchor availability.
 An unlinked registered-key item from the creative preview is not a valid key.
 Successful registration plays the vanilla Vault insert-item sound
 (`minecraft:block.vault.insert_item`), selected by the owner after auditioning it.
@@ -77,3 +94,38 @@ Registered keys with a UUID component have glint; blanks and unlinked preview
 keys do not. The owner confirmed glint and success-only playback with the
 previous sounds; the Vault sound was approved through an in-game command preview.
 See [progress](../PROGRESS.md) for test evidence and pending client validation.
+
+For copying, place a linked registered key in the left anvil input and one blank
+key in the right. Collecting one copy leaves the original unchanged and consumes
+the blank. Survival costs one level; creative retains vanilla's XP exemption but
+still consumes the blank. No anvil wear is applied. The copy preserves all item
+components, including its name and UUID; copying does not combine with renaming.
+Normal anvil operations outside this input pair remain vanilla.
+
+Copying only reproduces the key reference, without reading or modifying anchor
+records, generating rooms, or forcing chunks to load. It works while the anchor
+is absent. An unlinked preview key cannot be copied.
+
+### Charging prototype
+
+- A linked registered key uses the vanilla bow-use pose while the interaction
+  button is held. Its existing sprite is unchanged; no new artwork is needed.
+- Beginning use broadcasts `minecraft:block.portal.trigger`, the sound played
+  when a player touches a Nether portal, once from the server at the player.
+- At 60 ticks of uninterrupted use, the server shows
+  `Key charged. Teleportation is not implemented yet.` and ends that use cycle.
+  Completion starts a shared 400-tick (20-second) registered-key cooldown
+  per player using vanilla item cooldowns. Copies and keys linked to other
+  anchors cannot bypass it.
+- Releasing before completion cancels without a completion message, resource
+  consumption, or cooldown and restores the idle item pose. The already-started
+  portal sound is a one-shot, not a looping sound that is explicitly stopped.
+- Completion consumes nothing. At the owner's request, placeholder completion
+  now applies the cooldown so it can be tested before travel exists. Once
+  actual travel is implemented, apply it only after successful teleportation.
+- Unlinked creative-preview keys reject use with an explicit message. Blank
+  keys do not charge. Both hands and survival/creative are supported.
+- This is a presentation/timing prototype, not travel authorization. It checks
+  for a key reference but does not check anchor availability, allocate a region,
+  load anchor chunks, generate a room, or teleport. Lifecycle validation must
+  be wired before the completion action can become real travel.

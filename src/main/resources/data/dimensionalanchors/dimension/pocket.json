@@ -1,0 +1,13 @@
+{
+  "type": "dimensionalanchors:pocket",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "dimensionalanchors:pocket_void",
+      "layers": [],
+      "structure_overrides": [],
+      "features": false,
+      "lakes": false
+    }
+  }
+}

@@ -18,6 +18,15 @@
 
 Blank/registered keys are gameplay states; separate sprites do not mandate separate registered item types.
 
+### Deferred colored-key visuals
+
+Future crafting-table key-and-dye coloring supports all 16 vanilla dyes for both
+key states. Only the handle changes color; the blank/registered sprite distinction
+must remain visible for every color (32 colored visual variants in total).
+This does not require 32 registered items or 32 standalone PNGs; layered tinting
+versus individual textures must be assessed before implementation. No artwork or
+runtime resources are added by this plan. See [keys](KEYS.md#planned-handle-colors-deferred).
+
 ## Internal blocks
 
 - Boundary blocks enclose each room and are not obtainable/placeable by ordinary players.

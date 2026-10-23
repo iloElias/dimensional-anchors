@@ -30,6 +30,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipe;
@@ -61,6 +64,22 @@ public final class AnchorRegressionTests {
                 100, 0, true), AnchorRegressionTests::keyRegistration);
         register(event, "key_registration_lifecycle", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRegressionTests::keyRegistrationLifecycle);
+        register(event, "key_copying", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRegressionTests::keyCopying);
+        register(event, "key_copying_rejections", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRegressionTests::keyCopyingRejections);
+        register(event, "room_geometry", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomAllocationTests::geometry);
+        register(event, "room_allocation", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomAllocationTests::allocation);
+        register(event, "room_allocation_invalid_data", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomAllocationTests::invalidData);
+        register(event, "room_allocation_disk", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), RoomAllocationTests::disk);
+        register(event, "key_charging", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), KeyChargingTests::charging);
+        register(event, "pocket_dimension", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PocketDimensionTests::dimension);
     }
 
     private static void register(RegisterGameTestsEvent event, String name,
@@ -83,6 +102,161 @@ public final class AnchorRegressionTests {
                 return Component.literal(name);
             }
         });
+    }
+
+    private static void keyCopying(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
+        for (var anvil : List.of(Blocks.ANVIL, Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL)) {
+            for (ContainerInput click : List.of(ContainerInput.PICKUP, ContainerInput.QUICK_MOVE)) {
+                level.setBlockAndUpdate(pos, anvil.defaultBlockState());
+                var state = level.getBlockState(pos);
+                var player = helper.makeMockPlayer(GameType.SURVIVAL);
+                player.experienceLevel = 10;
+                var completionEffects = new java.util.concurrent.atomic.AtomicInteger();
+                ContainerLevelAccess access = new ContainerLevelAccess() {
+                    @Override
+                    public <T> java.util.Optional<T> evaluate(
+                            java.util.function.BiFunction<net.minecraft.world.level.Level, BlockPos, T> action) {
+                        completionEffects.incrementAndGet();
+                        return java.util.Optional.of(action.apply(level, pos));
+                    }
+                };
+                var menu = new AnvilMenu(1, player.getInventory(), access);
+                player.containerMenu = menu;
+                UUID anchorId = UUID.randomUUID();
+                var saved = AnchorSavedData.get(level);
+                saved.put(AnchorRecord.unplaced(anchorId, AnchorTier.COPPER, true));
+                var recordsBefore = saved.records();
+                ItemStack original = new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get());
+                original.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(anchorId));
+                original.set(DataComponents.CUSTOM_NAME, Component.literal("Original key"));
+                original.set(DataComponents.REPAIR_COST, 100);
+                ItemStack snapshot = original.copy();
+                menu.getSlot(0).set(original);
+                menu.setItemName("Original key");
+                for (int iteration = 0; iteration < 5; iteration++) {
+                    menu.getSlot(1).set(new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get()));
+                    helper.assertTrue(menu.getCost() == 1, "Copy cost must not escalate with repair cost or repetition");
+                    helper.assertTrue(player.experienceLevel == 10 - iteration, "Preview charged experience");
+                    helper.assertTrue(ItemStack.isSameItemSameComponents(menu.getSlot(2).getItem(), snapshot),
+                            "Preview must preserve UUID, name, and other components");
+                    int effectsBefore = completionEffects.get();
+                    menu.clicked(2, 0, click, player);
+                    helper.assertTrue(completionEffects.get() == effectsBefore + 1,
+                            "Completed copy must emit its anvil effect exactly once");
+                    helper.assertTrue(menu.getSlot(0).getItem() == original
+                            && ItemStack.isSameItemSameComponents(original, snapshot), "Original key was consumed or changed");
+                    helper.assertTrue(menu.getSlot(1).getItem().isEmpty(), "Copy must consume exactly one blank");
+                    helper.assertTrue(menu.getSlot(2).getItem().isEmpty(), "Output must clear after copying");
+                    helper.assertTrue(player.experienceLevel == 9 - iteration, "Copy must charge exactly one level");
+                    helper.assertTrue(level.getBlockState(pos).equals(state), "Copy damaged the anvil");
+                    ItemStack copy;
+                    if (click == ContainerInput.PICKUP) {
+                        copy = menu.getCarried().copy();
+                        menu.setCarried(ItemStack.EMPTY);
+                    } else {
+                        copy = ItemStack.EMPTY;
+                        for (int slot = 0; slot < 36; slot++) {
+                            ItemStack item = player.getInventory().getItem(slot);
+                            if (!item.isEmpty()) {
+                                helper.assertTrue(copy.isEmpty(), "Shift-click produced extra items");
+                                copy = item.copy();
+                                player.getInventory().setItem(slot, ItemStack.EMPTY);
+                            }
+                        }
+                    }
+                    helper.assertTrue(copy.getCount() == 1 && ItemStack.isSameItemSameComponents(snapshot, copy),
+                            "Collected copy lost data or duplicated");
+                    helper.assertTrue(copy.getItem().isFoil(copy), "Copied key must have glint");
+                    effectsBefore = completionEffects.get();
+                    menu.clicked(2, 0, click, player);
+                    helper.assertTrue(completionEffects.get() == effectsBefore,
+                            "Repeated collection without a blank must not emit an anvil effect");
+                    helper.assertTrue(player.experienceLevel == 9 - iteration && menu.getCarried().isEmpty(),
+                            "Repeated collection without another blank must do nothing");
+                    helper.assertTrue(saved.records().equals(recordsBefore), "Copying changed anchor lifecycle data");
+                    if (iteration == 4) {
+                        menu.getSlot(0).set(copy);
+                        menu.setItemName("Original key");
+                        menu.getSlot(1).set(new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get()));
+                        menu.clicked(2, 0, ContainerInput.PICKUP, player);
+                        helper.assertTrue(ItemStack.isSameItemSameComponents(menu.getCarried(), snapshot),
+                                "A copied key must be usable as another original");
+                        helper.assertTrue(player.experienceLevel == 4, "Copy from copy must still cost one level");
+                    }
+                }
+            }
+        }
+    }
+
+    private static void keyCopyingRejections(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var menu = new AnvilMenu(1, player.getInventory());
+        player.containerMenu = menu;
+        ItemStack linked = new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get());
+        linked.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(UUID.randomUUID()));
+        ItemStack blank = new ItemStack(DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get());
+        for (List<ItemStack> pair : List.of(
+                List.of(new ItemStack(DimensionalAnchors.DIMENSIONAL_KEY.get()), blank),
+                List.of(blank, linked))) {
+            menu.getSlot(0).set(pair.get(0).copy());
+            menu.getSlot(1).set(pair.get(1).copy());
+            helper.assertTrue(menu.getSlot(2).getItem().isEmpty(),
+                    "Invalid key pair produced a copy: " + pair);
+        }
+        // Menu slots clamp non-stackable items to one; exercise malformed counts at the event boundary.
+        for (List<ItemStack> pair : List.of(List.of(linked.copyWithCount(2), blank),
+                List.of(linked, blank.copyWithCount(2)))) {
+            var event = new net.neoforged.neoforge.event.AnvilUpdateEvent(
+                    pair.get(0), pair.get(1), null, ItemStack.EMPTY, 0, 0, player);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(event);
+            helper.assertTrue(event.isCanceled(), "Malformed stacked keys must be rejected");
+        }
+        menu.getSlot(0).set(linked.copy());
+        menu.getSlot(1).set(blank.copy());
+        helper.assertTrue(!menu.getSlot(2).mayPickup(player), "Player without XP must not collect copy");
+        menu.clicked(2, 0, ContainerInput.PICKUP, player);
+        helper.assertTrue(menu.getCarried().isEmpty() && !menu.getSlot(1).getItem().isEmpty(),
+                "Failed no-XP collection consumed a blank or awarded a key");
+        menu.clicked(2, 0, ContainerInput.QUICK_MOVE, player);
+        helper.assertTrue(player.getInventory().isEmpty() && !menu.getSlot(1).getItem().isEmpty(),
+                "Shift-click without XP awarded a copy or consumed a blank");
+        player.experienceLevel = 3;
+        for (int slot = 0; slot < 36; slot++) {
+            player.getInventory().setItem(slot, new ItemStack(Items.STONE, 64));
+        }
+        menu.clicked(2, 0, ContainerInput.QUICK_MOVE, player);
+        helper.assertTrue(player.experienceLevel == 3 && !menu.getSlot(1).getItem().isEmpty()
+                && !menu.getSlot(2).getItem().isEmpty(), "Full inventory shift-click charged or consumed inputs");
+        menu.getSlot(1).set(ItemStack.EMPTY);
+        helper.assertTrue(menu.getSlot(2).getItem().isEmpty(), "Removing blank must remove output");
+        helper.assertTrue(player.experienceLevel == 3, "Cancelling preview charged XP");
+        ItemStack malformedBlank = blank.copy();
+        malformedBlank.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(UUID.randomUUID()));
+        menu.getSlot(1).set(malformedBlank);
+        helper.assertTrue(menu.getSlot(2).getItem().isEmpty(), "Blank with a forged reference produced a copy");
+        menu.getSlot(1).set(blank.copy());
+        menu.setItemName("Copy name must not replace original name");
+        helper.assertTrue(!menu.getSlot(2).getItem().has(DataComponents.CUSTOM_NAME),
+                "Copying must reproduce the original, not combine with renaming");
+        var ordinary = new AnvilMenu(3, player.getInventory());
+        ordinary.getSlot(0).set(new ItemStack(Items.IRON_SWORD));
+        ordinary.setItemName("Vanilla rename");
+        helper.assertTrue(ordinary.getSlot(2).getItem().getItem() == Items.IRON_SWORD
+                && ordinary.getCost() == 1, "Key hooks must not change ordinary anvil operations");
+        var creative = helper.makeMockPlayer(GameType.CREATIVE);
+        GameType.CREATIVE.updatePlayerAbilities(creative.getAbilities());
+        var creativeMenu = new AnvilMenu(2, creative.getInventory());
+        creative.containerMenu = creativeMenu;
+        creativeMenu.getSlot(0).set(linked.copy());
+        creativeMenu.getSlot(1).set(blank.copy());
+        creativeMenu.clicked(2, 0, ContainerInput.PICKUP, creative);
+        helper.assertTrue(creativeMenu.getCarried().getCount() == 1
+                && creativeMenu.getSlot(0).getItem().getCount() == 1
+                && creativeMenu.getSlot(1).getItem().isEmpty(), "Creative copying must retain original and consume blank");
+        helper.assertTrue(creative.experienceLevel == 0, "Creative should retain vanilla XP exemption");
     }
 
     private static void upgradeRecipes(GameTestHelper helper) {

@@ -7,13 +7,18 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
 ## Decisions requiring approval
 
 - **Recovery after anchor loss:** how a room becomes available again after its anchor block/item is destroyed. Until recovery is defined, preserve the room and region but suspend new entry.
-- **Allocation capacity:** practical maximum number of fixed-size rooms and behavior when the allocator reaches capacity.
-- **Biome details:** exact custom-biome features/effects, while natural entity spawning remains disabled and skybox/lighting follow The End.
 - **Presentation:** final appearance for internal blocks and whether existing anchor texture files are templates or finished art.
+- **Deferred key colors:** coloring blank and registered keys with any of the
+  16 dyes in the crafting table is approved for future work. Before implementing,
+  settle the recipe layout, recoloring rules, color retention during registration,
+  and color inheritance when copying a registered key using a colored blank.
 
 ## Technical work to propose and verify
 
-- Exact horizontal rounding, door geometry, landing coordinates, allocation spacing, and migration formulas.
+- Physical door behavior, safe landing validation, and migration formulas.
+  The initial coordinate convention and allocation layout are recorded in
+  [rooms](ROOMS.md#implemented-geometry-foundation) and
+  [dimension](DIMENSION.md#implemented-reservation-foundation).
 - Persistent identity, room lifecycle, region reservations, pending returns, and saved-data versioning.
 - Key-copy validation against illicit item duplication; copies themselves are unlimited, but item duplication must not corrupt room state.
 - Safe landing/return search bounds, unavailable dimensions, obstructed personal/world spawn, and bounded chunk loading.
@@ -36,6 +41,14 @@ These are unresolved details, not permission to invent gameplay. Recipes, key ti
 - While the anchor is absent, existing occupants can remain/exit, but new entries are suspended until recovery/replacement.
 - One shared dimension, first-access generation, fixed tier sizes, one south-wall control block, fixed floor, and upward growth are approved.
 - The custom biome has no natural entity spawning; skybox and lighting follow The End.
+- Initial environment uses the target version's End settings, including music,
+  fixed clock, lighting, no precipitation, exploding beds, and nonfunctional
+  respawn anchors. The custom biome has no terrain features, carvers, structures,
+  or spawn entries; dragon-fight initialization is disabled.
 - Destroyed-room region cleanup/reuse is disabled; anchor destruction preserves the room and reserved region.
+- Allocation is capped at 4,096 permanent reservations per world. At capacity,
+  reject new allocations with explicit feedback; preserve existing reservations
+  and do not reuse regions. Existing rooms remain accessible subject to their
+  normal lifecycle rules.
 
 Implementation still requires explicit approval under the [workflow](VERIFICATION.md).

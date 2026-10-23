@@ -38,4 +38,57 @@
 - On anchor extraction/destruction, players and non-player entities remain in the preserved room; existing players can exit, but new entry is suspended while the anchor is absent.
 - Anchor-block destruction does not delete room blocks, entities, or the reserved region.
 
-Allocation limits, biome implementation, persistence APIs, and removal compatibility require [technical planning](OPEN_QUESTIONS.md).
+Room generation, migration, and removal compatibility
+still require [technical planning](OPEN_QUESTIONS.md).
+
+## Implemented reservation foundation
+
+- The approved cap is 4,096 rooms per world, laid out as a 64-by-64 grid.
+  Slot `s` has reference X=`(s % 64) * 32 + 16` and
+  Z=`floor(s / 64) * 32 + 16`.
+- References are 32 blocks apart, not four chunks. Each maximum room requires
+  an 18-by-18 horizontal footprint including walls, leaving 14 blocks between
+  neighboring shells. No view-distance restriction is introduced.
+- `RoomAllocationSavedData` stores UUID-to-slot mappings in the Overworld's
+  saved-data storage, shared by requests from every dimension. Existing
+  dimension-local anchor records are not migrated or otherwise changed here.
+- Reservations are idempotent for an existing UUID, append-only, and never
+  reclaimed. Exhaustion raises an explicit error without changing existing
+  reservations. Player-facing translation is deferred until first-access
+  gameplay calls the allocator; there is no new player entry path yet.
+- Schema version 1 rejects unsupported versions, invalid UUIDs, out-of-range,
+  duplicate, or non-contiguous slots, including partial codec results.
+  Unreadable existing files block allocation rather than being replaced by an
+  empty store. Layout/schema changes require an explicit future migration.
+- This foundation does not reserve on crafting, placement, registration, or
+  copying. First-access generation will call it before generating a room.
+  No custom dimension, biome, chunks, physical room, or teleports are created
+  by this implementation.
+
+## Implemented empty dimension checkpoint
+
+- `dimensionalanchors:pocket` is the single shared dimension, defined by a
+  standalone data resource. It uses a custom dimension type of the same name
+  and the custom `dimensionalanchors:pocket_void` biome.
+- The dimension type mirrors Minecraft 26.1.2's actual End resource, except
+  `has_ender_dragon_fight` is false. The 26.1 environmental attributes, End
+  clock/timelines, skybox, ambient light, music, and vertical range (Y=0..255)
+  are retained. No dimension-type Java registration or custom renderer is needed.
+- The owner approved inheriting End gameplay rules as well: beds explode and
+  cannot set spawn; respawn anchors do not work.
+- A flat generator with zero layers, disabled features/lakes, and an explicit
+  empty structure override list generates air only. The custom biome has no
+  carvers, placed features, precipitation, spawn costs, or natural spawn entries.
+  There is no End platform, portal, island, spike, or dragon fight.
+- This does not prohibit entities intentionally introduced by players or other
+  mods. No global entity removal or dimension ticking handler is added.
+- No forced chunk tickets, player teleport, room generation, allocation on
+  registration, or new key behavior is introduced by these resources.
+- Existing dimension-local anchor records remain unchanged. This checkpoint
+  does not resolve remote-anchor persistence or migration.
+
+The GameTest server explicitly discards standalone datapack dimensions when
+building its world. A test-only flat preset adds the pocket dimension while
+preserving vanilla Overworld/Nether/End settings. The test decodes the production
+dimension resource and verifies parity with that preset. The preset and test
+classes must not be included in the production JAR.

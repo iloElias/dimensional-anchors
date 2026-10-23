@@ -52,4 +52,22 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
 - Normal wall movement must not cause false deaths. Process legitimate exits and internal mod teleports correctly before violation enforcement.
 - Cover login, respawn, invalid coordinates, and client position manipulation without recursive or repeated death events.
 
-Configuration maximums, changes to existing rooms, geometry formulas, and safe entry placement remain in [open questions](OPEN_QUESTIONS.md).
+## Implemented geometry foundation
+
+- `RoomGeometry` defines usable cubic interiors of 3, 5, 7, 10, and 16 blocks.
+  It calculates coordinates only; no room blocks are generated yet.
+- Floor blocks are at Y=63; usable space begins at Y=64. Expansion keeps this
+  floor fixed and raises the ceiling.
+- For horizontal reference `(x, z)` and interior size `n`, minimum coordinates
+  are `(x - floor(n/2), z - floor(n/2))`; maximums are minimums plus `n - 1`.
+  Even sizes extend one extra block north/west. All successive interiors contain
+  the preceding interior without moving existing coordinates.
+- The shell extends one block beyond the interior on all six sides.
+- The intended entry feet position is at reference X, Y=64, and the southernmost
+  interior Z. The single control position is one block south and one block above
+  those feet, in the south wall. Future entry faces north.
+- These are default coordinates, not proof of a safe landing after construction.
+  Obstruction checks, physical wall/control behavior, and protected expansion are
+  still pending. No teleportation uses these coordinates yet.
+
+Safe entry placement and migration remain in [open questions](OPEN_QUESTIONS.md).

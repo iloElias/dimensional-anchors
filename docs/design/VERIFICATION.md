@@ -118,3 +118,121 @@ Pending in-game confirmation:
    must still be rejected, and the original key reference must remain unchanged.
 5. Repeat registration with the off hand and in creative. Only the hand used
    changes; creative registration also replaces its blank key.
+
+### Anvil copying checkpoint
+
+Automated tests use real `AnvilMenu` pickup/shift-click operations to verify the
+retained original, single blank consumption, one-level cost, no wear on all
+anvil damage stages, unchanged components/UUID/glint, copying from a copy, fixed
+cost despite high prior repair cost, no repeated free output, no-XP rejection,
+full-inventory rejection, preview cancellation, invalid inputs, creative XP
+exemption, and unchanged vanilla renaming outside the copy operation.
+
+Pending in-game confirmation:
+
+1. In survival, put a registered key on the left and a blank on the right.
+   Previewing must consume nothing; collecting costs one level and one blank,
+   leaving the original in place and producing a copy with identical UUID/glint.
+2. Click the output again without adding another blank: no additional copy.
+3. Repeat with shift-click, then with no XP and with a full inventory.
+   Failed collections must consume neither XP nor blank keys.
+4. Remove the anchor and copy its key again. Check that copying changes no room
+   state and does not reset registration.
+5. Use a copy as the next original and verify the same fixed cost and no anvil
+   damage. Repeat after a game restart.
+
+### Allocation and geometry foundation
+
+Four additional GameTests in
+[RoomAllocationTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/RoomAllocationTests.java)
+cover:
+
+- Exact interior dimensions and fixed floor for every tier in all 4,096 slots;
+  nested upgrade bounds, consistent odd/even rounding, standing space, and
+  south-wall control coordinates.
+- Pairwise non-overlap of all maximum-room reservations (8,386,560 pairs).
+- Idempotent reservation, all 4,096 allocations, explicit exhaustion without
+  mutation, existing-room lookup at capacity, and the next slot after reload.
+- One global allocator across the server's available dimensions.
+- JSON codec and actual compressed-NBT disk write/reload through
+  `SavedDataStorage`, preserving UUID mappings.
+- Invalid UUIDs/slots, duplicated or missing slots, unsupported versions,
+  partial decoding, and corrupt files. Existing invalid files must not be
+  overwritten or silently replaced by an empty allocator.
+
+Temporary disk-test files are removed after testing. Deliberately malformed
+saved-data cases produce expected error logs. These tests do not establish
+physical room generation, safe landing after construction, protection, or
+travel behavior. There is no new in-game room interaction to test at this stage.
+
+### Registered-key charging prototype
+
+[KeyChargingTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/KeyChargingTests.java)
+uses real player item-use ticks in both hands and survival/creative:
+
+- Idle/start state, 60-tick duration, bow-use animation, and automatic completion
+  on tick 60 rather than on release.
+- Cancellation at ticks 0, 1, 30, and 59, with no completion message or cooldown.
+- One completion message per use cycle; no movement, dimension change, or key/XP
+  consumption. Completion applies a 400-tick cooldown shared across copies and
+  different anchor references, isolated per player. Verify rejection until
+  expiry, reuse after expiry, and no cooldown on early release.
+- One server-side Nether portal trigger sound event per started charge; no
+  extra sound at completion or for invalid keys.
+- Explicit unlinked-preview rejection and unchanged blank-key behavior.
+
+Manual client checkpoint:
+
+1. Hold a registered key without interacting: it keeps its ordinary item pose.
+2. Hold use while aiming into the air: the bow-use pose starts and the Nether
+   portal contact sound plays.
+3. Continue for three seconds: the completion message appears without releasing.
+   No teleport is expected; a 20-second vanilla cooldown overlay appears.
+4. Release earlier: the key returns to idle with no completion message or penalty.
+5. Repeat using the offhand and check first-/third-person presentation.
+6. During cooldown, switch to another copy or another registered key: use must
+   remain blocked. After 20 seconds, charging becomes available again.
+
+Headless tests verify animation selection and sound dispatch, not rendered
+animation or audible client playback.
+
+### Empty shared dimension checkpoint
+
+[PocketDimensionTests](../../src/gameTest/java/com/iloelias/dimensionalanchors/PocketDimensionTests.java)
+checks a loaded server dimension, production-resource/test-preset parity,
+End-equivalent dimension settings except dragon-fight initialization, unchanged
+real End dragon-fight availability, maximum-room vertical fit, global allocation
+lookup, the flat generator's empty layers/structure overrides, exclusive custom
+biome selection, no carvers/features/precipitation/spawn entries, and three
+generated chunks (including the far edge of the allocation grid) containing
+only air and no structure starts.
+
+The GameTest server discards standalone dimension entries, so its flat preset
+is extended only in the `gameTest` resource source set. Verify that the
+production JAR contains the three dimension/biome resources but no test classes
+or `data/minecraft/worldgen/world_preset/flat.json`.
+
+Client checkpoint, in a disposable world with commands enabled:
+
+1. Confirm the world loads without registry errors and the dimension is offered
+   by `/execute in` completion. Check a fresh world and a reopened existing
+   disposable world; headless preset tests do not establish existing-save loading.
+2. Switch to spectator **before** entering; this dimension has no floor or exit.
+   Record an exterior return position. For example:
+
+   ```text
+   /gamemode spectator
+   /execute in dimensionalanchors:pocket run tp @s 16 80 16
+   ```
+
+3. Check the void terrain, End-like sky/lighting and biome. This is a visual
+   check, not evidence of complete room protection or gameplay.
+4. Return by operator command to a known safe exterior position, for example
+   `/execute in minecraft:overworld run tp @s <x> <y> <z>`, before changing mode.
+   Do not test survival entry into the void.
+5. Registered-key use must remain the charging/message/cooldown prototype.
+   It must not teleport into the empty dimension.
+
+No claim of client rendering, existing-save migration, modded spawning
+compatibility, playable rooms, or safe entry is established by these headless
+checks.

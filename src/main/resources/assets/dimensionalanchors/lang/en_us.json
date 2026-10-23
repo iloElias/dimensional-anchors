@@ -1,5 +1,6 @@
 {
   "itemGroup.dimensionalanchors": "Dimensional Anchors",
+  "biome.dimensionalanchors.pocket_void": "Dimensional Void",
   "block.dimensionalanchors.copper_dimensional_anchor": "Copper Dimensional Anchor",
   "block.dimensionalanchors.iron_dimensional_anchor": "Iron Dimensional Anchor",
   "block.dimensionalanchors.gold_dimensional_anchor": "Gold Dimensional Anchor",
@@ -21,5 +22,7 @@
   "message.dimensionalanchors.key_registered": "Key registered. Teleportation is not implemented yet.",
   "message.dimensionalanchors.already_registered": "This anchor has already been registered. Another blank key cannot be linked.",
   "message.dimensionalanchors.anchor_data_error": "Cannot register key: anchor data is missing or inconsistent. Check the server log.",
-  "message.dimensionalanchors.invalid_blank_key": "Cannot register key: invalid blank key data."
+  "message.dimensionalanchors.invalid_blank_key": "Cannot register key: invalid blank key data.",
+  "message.dimensionalanchors.unlinked_key": "This key is not linked to an anchor.",
+  "message.dimensionalanchors.key_charge_complete": "Key charged. Teleportation is not implemented yet."
 }

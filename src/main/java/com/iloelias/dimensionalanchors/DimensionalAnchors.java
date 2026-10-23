@@ -21,6 +21,7 @@ import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -125,6 +126,8 @@ public class DimensionalAnchors {
         DATA_COMPONENTS.register(modEventBus);
         RECIPE_SERIALIZERS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+        NeoForge.EVENT_BUS.addListener(KeyCopying::update);
+        NeoForge.EVENT_BUS.addListener(KeyCopying::take);
     }
 
     private static DeferredBlock<Block> registerAnchor(
