@@ -5,6 +5,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -33,6 +34,9 @@ public final class AnchorBlock extends Block {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (stack.getItem() == DimensionalAnchors.DIMENSIONAL_KEY.get()) {
+            return enterWithKey(stack, level, pos, player, hitResult);
+        }
         if (stack.getItem() != DimensionalAnchors.UNASSIGNED_DIMENSIONAL_KEY.get()) {
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
@@ -68,6 +72,35 @@ public final class AnchorBlock extends Block {
         return InteractionResult.SUCCESS_SERVER;
     }
 
+    private InteractionResult enterWithKey(ItemStack stack, Level level, BlockPos pos, Player player,
+            BlockHitResult hitResult) {
+        RegisteredKeyData keyData = stack.get(DimensionalAnchors.REGISTERED_KEY_DATA.get());
+        if (keyData == null) {
+            return InteractionResult.FAIL;
+        }
+        if (!(level instanceof ServerLevel serverLevel) || !(player instanceof ServerPlayer serverPlayer)) {
+            return InteractionResult.SUCCESS;
+        }
+        AnchorRecord record = AnchorSavedData.get(serverLevel)
+                .findAt(GlobalPos.of(serverLevel.dimension(), pos)).orElse(null);
+        if (record == null || !record.registered() || record.tier() != tier
+                || !record.anchorId().equals(keyData.anchorId())) {
+            serverLevel.playSound(null, pos, SoundEvents.VAULT_REJECT_REWARDED_PLAYER, SoundSource.BLOCKS, 1.0F, 1.0F);
+            player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.wrong_anchor"));
+            return InteractionResult.FAIL;
+        }
+        RoomGeometry geometry;
+        try {
+            geometry = RoomGeneration.prepare(serverLevel, record.anchorId(), record.tier());
+        } catch (IllegalStateException exception) {
+            DimensionalAnchors.LOGGER.error("Cannot prepare room for anchor {}", record.anchorId(), exception);
+            player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.room_generation_failed"));
+            return InteractionResult.FAIL;
+        }
+        return PlayerTravelService.enterFromAnchor(serverPlayer, record.anchorId(), geometry, pos,
+                hitResult.getDirection()) ? InteractionResult.SUCCESS_SERVER : InteractionResult.FAIL;
+    }
+
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.LivingEntity placer,
             ItemStack stack) {
@@ -93,7 +126,11 @@ public final class AnchorBlock extends Block {
         AnchorRecord record = existing == null
                 ? AnchorRecord.unplaced(itemData.anchorId(), tier, itemData.registered())
                 : existing.withTier(tier);
-        AnchorIdentity.store(serverLevel, record.placedAt(GlobalPos.of(serverLevel.dimension(), pos)));
+        record = record.placedAt(GlobalPos.of(serverLevel.dimension(), pos));
+        AnchorIdentity.store(serverLevel, record);
+        if (record.registered()) {
+            RoomGeneration.tryExpandExisting(serverLevel, itemData.anchorId(), tier, "anchor placement");
+        }
     }
 
     @Override

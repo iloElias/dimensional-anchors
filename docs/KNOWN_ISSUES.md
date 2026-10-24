@@ -5,7 +5,8 @@ confirmed root cause or evidence that a fix has been implemented.
 
 ## DA-003: Pocket room expansion blocked by builds outside the room
 
-- **Status:** Placement restriction implemented; owner testing and validation
+- **Status:** Placement restriction confirmed in-game by the owner. Ordered
+  craft/placement/key-access expansion retries are implemented; validation is
   pending. Existing obstructions are deliberately not removed automatically.
 - The owner reported being able to build outside a generated room. A later
   registered-key charge failed closed with `RoomGeneration.prepare` reporting
@@ -18,7 +19,8 @@ confirmed root cause or evidence that a fix has been implemented.
   falls outside that permitted area. This does not remove old blocks or prevent
   command/mod-driven writes; those need separate validation.
 - Inspect the block at `(80, 71, 16)` in the pocket and remove/move it manually
-  if safe, then use the registered key again. Confirm the room expands and that
+  if safe. Expansion now tries on crafting pickup and anchor placement before
+  falling back to registered-key access. Confirm the room expands and that
   placement outside the new interior remains rejected.
 
 ## DA-002: Extracted registered anchor reported with an unset registration flag

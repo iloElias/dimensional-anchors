@@ -163,6 +163,56 @@ final class PlayerRoomReconciliationTests {
         }
     }
 
+    static void interruptedTransitions(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var pocket = level.getServer().getLevel(RoomGeneration.POCKET);
+        UUID room = UUID.randomUUID();
+        var geometry = RoomGeneration.prepare(pocket, room, AnchorTier.COPPER);
+        var sessions = PlayerRoomSavedData.get(level);
+        var feet = helper.absolutePos(new BlockPos(2, 3, 2));
+        level.setBlockAndUpdate(feet.below(), Blocks.STONE.defaultBlockState());
+        level.setBlockAndUpdate(feet, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(feet.above(), Blocks.AIR.defaultBlockState());
+        var arrival = Vec3.atBottomCenterOf(feet);
+        for (int scenario = 0; scenario < 3; scenario++) {
+            var player = new ReconciliationPlayer(scenario == 0 ? pocket : level);
+            player.setPos(scenario == 0 ? Vec3.atBottomCenterOf(geometry.reference())
+                    : scenario == 1 ? arrival : arrival.add(20, 0, 0));
+            sessions.enter(player.getUUID(), room, exterior());
+            var transition = new PlayerTransition(UUID.randomUUID(), PlayerTransition.Type.EXIT,
+                    java.util.Optional.of(room), java.util.Optional.empty(), level.dimension(), arrival, 0, 0, exterior(),
+                    scenario == 0 ? PlayerTransition.Stage.PREPARED : PlayerTransition.Stage.TELEPORTED);
+            sessions.recordTransition(player.getUUID(), transition);
+            if (scenario == 2) {
+                var ops = com.mojang.serialization.JsonOps.INSTANCE;
+                var restored = PlayerRoomSavedData.CODEC.parse(ops,
+                        PlayerRoomSavedData.CODEC.encodeStart(ops, sessions).getOrThrow()).getOrThrow();
+                helper.assertTrue(restored.transition(player.getUUID()).orElseThrow().equals(transition),
+                        "Transition journal did not survive a save round trip");
+            }
+            var position = player.position();
+            try {
+                NeoForge.EVENT_BUS.post(new PlayerEvent.PlayerLoggedInEvent(player));
+                switch (scenario) {
+                    case 0 -> helper.assertTrue(sessions.transition(player.getUUID()).isEmpty()
+                            && sessions.find(player.getUUID()).isPresent() && player.position() == position,
+                            "Unchanged source did not cancel the interrupted transition");
+                    case 1 -> helper.assertTrue(sessions.find(player.getUUID()).isEmpty()
+                            && sessions.transition(player.getUUID()).isEmpty()
+                            && player.hasMessage("message.dimensionalanchors.exit_complete"),
+                            "Proven safe arrival did not complete the interrupted exit");
+                    default -> helper.assertTrue(sessions.find(player.getUUID()).isPresent()
+                            && sessions.transition(player.getUUID()).orElseThrow().equals(transition)
+                            && player.position() == position
+                            && player.hasMessage("message.dimensionalanchors.session_reconciliation_failed"),
+                            "Unproven arrival changed the session, journal or player position");
+                }
+            } finally {
+                sessions.find(player.getUUID()).ifPresent(session -> sessions.completeExit(player.getUUID(), room));
+            }
+        }
+    }
+
     private static ExteriorReturn exterior() {
         return new ExteriorReturn(Level.OVERWORLD, new Vec3(2.5, 80, 2.5), 70, -10);
     }

@@ -101,8 +101,8 @@ Dimensions exclude walls, floor, and ceiling. These are fixed defaults for now; 
   those feet, in the inner layer of the south wall. Future entry faces north.
 - These are default coordinates, not proof of a safe landing after construction.
   Safe landing resolution and the keyless exit control are implemented, but
-  ordinary player entry remains disabled. Manual landing/control checks remain
-  necessary.
+  ordinary player entry is now implemented (see [TRAVEL](TRAVEL.md)). Manual
+  landing/control checks remain necessary.
 
 - Temporarily, a full charge with an available linked anchor prepares its room
   without moving the player, as approved by the owner. An upgraded anchor expands

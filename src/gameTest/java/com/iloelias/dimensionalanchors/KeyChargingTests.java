@@ -131,10 +131,11 @@ final class KeyChargingTests {
                         "A placed linked anchor must pass the entry check on tick 60");
                 helper.assertTrue(RoomAllocationSavedData.get(level).room(anchorId).orElseThrow().complete(),
                         "A successful charge did not prepare the room");
-                helper.assertTrue(player.getCooldowns().isOnCooldown(key),
-                        "Completed charge must apply cooldown");
-                helper.assertTrue(player.getCooldowns().getCooldownPercent(key, 0) == 399.0F / 400.0F,
-                        "Cooldown duration must be 400 ticks, including the completing player tick");
+                helper.assertTrue(!player.getCooldowns().isOnCooldown(key),
+                        "A charge that did not teleport applied the remote-travel cooldown");
+                // Cooldown is applied by successful remote travel (see room_entry); verify its blocking rules here.
+                player.getCooldowns().addCooldown(key, RegisteredKeyItem.COOLDOWN_TICKS);
+                player.tick();
                 var copy = key.copy();
                 var otherKey = key.copy();
                 otherKey.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(UUID.randomUUID()));
@@ -156,7 +157,7 @@ final class KeyChargingTests {
                         && player.level() == level && player.experienceLevel == xp
                         && player.getCooldowns().isOnCooldown(key)
                         && ItemStack.matches(original, player.getItemInHand(hand)),
-                        "Prototype teleported, consumed resources, repeated completion, or lost cooldown");
+                        "Charge without travel moved the player, consumed resources, repeated completion, or lost cooldown");
                 for (int tick = 6; tick < 399; tick++) {
                     player.getCooldowns().tick();
                 }
@@ -261,8 +262,8 @@ final class KeyChargingTests {
                 && messages.getFirst().getContents() instanceof TranslatableContents text
                 && text.getKey().equals("message.dimensionalanchors.key_anchor_unavailable"),
                 "A stale anchor record must show unavailable feedback when the 60-tick charge completes");
-        helper.assertTrue(player.getCooldowns().isOnCooldown(key) && player.position().equals(position)
-                && player.level() == level, "Unavailable completion should not teleport and must keep prototype cooldown");
+        helper.assertTrue(!player.getCooldowns().isOnCooldown(key) && player.position().equals(position)
+                && player.level() == level, "Unavailable completion teleported or applied the travel cooldown");
         helper.assertTrue(RoomAllocationSavedData.get(level).find(anchorId).isEmpty(),
                 "Unavailable anchor allocated a room");
     }
@@ -304,9 +305,9 @@ final class KeyChargingTests {
                 && text.getKey().equals("message.dimensionalanchors.room_generation_failed"),
                 "Generation failure did not show explicit feedback");
         helper.assertTrue(data.room(id).isEmpty() && player.position().equals(position)
-                && player.level() == level && player.getCooldowns().isOnCooldown(key)
+                && player.level() == level && !player.getCooldowns().isOnCooldown(key)
                 && pocket.getBlockState(geometry.exitControl()).is(Blocks.STONE),
-                "Generation failure changed blocks, moved the player, or lost prototype cooldown");
+                "Generation failure changed blocks, moved the player, or applied the travel cooldown");
         pocket.setBlockAndUpdate(geometry.exitControl(), Blocks.AIR.defaultBlockState());
     }
 }

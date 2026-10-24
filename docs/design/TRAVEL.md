@@ -7,8 +7,8 @@
 - Entry is authorized by a valid registered key: either charged remote use or
   interaction with its matching placed anchor while holding that key.
 - This supersedes the previous prohibition on anchor-interaction entry. Both
-  entry paths remain disabled in the current implementation until the complete
-  transition/recovery safety gate is implemented and verified.
+  entry paths are implemented (2026-10-23) through `PlayerTravelService` and
+  the transition journal; in-game validation is pending (TT-082).
 - Entry always faces north, with the south-wall door/control area behind the player.
 - Store one server-side exterior return destination per player/session, including dimension and position. Preserve it across disconnection and restart.
 - Charged remote entry records exact exterior position, dimension and orientation
@@ -16,8 +16,14 @@
   position or the anchor's current location.
 - Anchor-interaction entry records a safe point in front of the block according
   to its facing. Capture it at entry; later relocation/destruction does not
-  change that session's return. Block-facing state and this entry path are
-  approved but not implemented in this checkpoint.
+  change that session's return. The anchor has no facing state, so the clicked
+  horizontal side is used (top/bottom clicks use the player's side); the
+  return faces the anchor and falls back to the player's position if no safe
+  point is found nearby.
+- The key cooldown (400 ticks) applies only after a successful remote key
+  teleport (entry, room change or exit). Anchor interaction, the exit control
+  and failed charges do not apply it. It is added after arrival, since a
+  dimension change recreates the client player and loses earlier cooldowns.
 - Room-to-room travel preserves that one exterior destination. `world -> A -> B -> exit` returns to the world, not A.
 - Extraction/destruction of A after the player has moved into B does not affect that player. The currently occupied room determines exceptional outcomes.
 - Using the currently occupied room's key exits after normal charging and subject to cooldown.
@@ -84,6 +90,31 @@ The following player-transition work is still pending:
   position and cannot be invented for players predating tracking.
 - Existing anchor absence rules are unchanged: occupants may stay and exit;
   no new entry until an anchor is placed again.
+
+## Implemented exit transition journal, 2026-10-23
+
+- `PlayerRoomSavedData` optionally stores one `PlayerTransition` per player
+  (`transitions`, still data version 1; older saves load with none). It records
+  operation ID, type (`exit` only), source room, expected destination
+  (dimension, position, rotation), original exterior return and stage
+  (`prepared` before teleport, `teleported` after the server accepts it).
+- Exit records the transition before teleporting, removes it with the session
+  on confirmed arrival, cancels it when the teleport is rejected without
+  movement, and retains it when the outcome is ambiguous.
+- Login/respawn: a player in the source room cancels the transition; an
+  exterior player within one block of the expected destination at a safe
+  position completes the exit; any other state keeps the session and journal
+  and reports a diagnostic. No teleport is performed by reconciliation.
+- Entry (`entry`) and room change (`room_change`) are journaled the same way.
+  The session is created or switched only after confirmed safe arrival. At
+  login, a player at the expected arrival inside the target room completes the
+  transition; an entry whose player never reached the pocket is cancelled; a
+  room change whose player is still in the source room is cancelled; anything
+  else is retained and reported.
+- Entry is denied while a transition is unresolved, outside the pocket with a
+  leftover session, or inside the pocket without a session.
+- Pending: intermediate-state rescue, historical spawn tracking and the
+  explicit player-facing retry.
 
 ## Implemented session-data foundation
 

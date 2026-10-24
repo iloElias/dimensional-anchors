@@ -222,6 +222,7 @@ final class AnchorRecoveryTests {
         var source = admin(player);
         UUID id = UUID.randomUUID();
         AnchorSavedData.get(level).put(AnchorRecord.unplaced(id, AnchorTier.COPPER, true));
+        RoomGeneration.prepare(level, id, AnchorTier.COPPER);
         var copper = new ItemStack(DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR_ITEM.get());
         copper.set(DimensionalAnchors.ANCHOR_ITEM_DATA.get(), new AnchorItemData(id, AnchorTier.COPPER, true));
         var obsoleteCopper = copper.copy();
@@ -237,6 +238,8 @@ final class AnchorRecoveryTests {
         menu.clicked(0, 0, ContainerInput.PICKUP, player);
         helper.assertTrue(AnchorIdentity.find(level, id).orElseThrow().tier() == AnchorTier.IRON,
                 "Taking an upgraded crafting output did not persist its tier");
+        helper.assertTrue(RoomAllocationSavedData.get(level).room(id).orElseThrow().tier() == AnchorTier.IRON,
+                "Taking an upgraded crafting output did not immediately expand its generated room");
         player.getInventory().clearContent();
         helper.assertTrue(execute(source, id.toString()) == 1
                 && player.getInventory().getItem(0).is(DimensionalAnchors.IRON_DIMENSIONAL_ANCHOR_ITEM.get()),
@@ -245,6 +248,7 @@ final class AnchorRecoveryTests {
 
         UUID smithId = UUID.randomUUID();
         AnchorSavedData.get(level).put(AnchorRecord.unplaced(smithId, AnchorTier.DIAMOND, true));
+        RoomGeneration.prepare(level, smithId, AnchorTier.DIAMOND);
         var diamond = new ItemStack(DimensionalAnchors.DIAMOND_DIMENSIONAL_ANCHOR_ITEM.get());
         diamond.set(DimensionalAnchors.ANCHOR_ITEM_DATA.get(), new AnchorItemData(smithId, AnchorTier.DIAMOND, true));
         var smith = new SmithingMenu(11, player.getInventory());
@@ -258,6 +262,9 @@ final class AnchorRecoveryTests {
         smith.clicked(3, 0, ContainerInput.PICKUP, player);
         helper.assertTrue(AnchorIdentity.find(level, smithId).orElseThrow().tier() == AnchorTier.NETHERITE,
                 "Taking the smithing output did not persist its tier");
+        helper.assertTrue(RoomAllocationSavedData.get(level).room(smithId).orElseThrow().tier()
+                == AnchorTier.NETHERITE,
+                "Taking a Netherite smithing output did not immediately expand its generated room");
         player.getInventory().clearContent();
         helper.assertTrue(execute(source, smithId.toString()) == 1
                 && player.getInventory().getItem(0).is(DimensionalAnchors.NETHERITE_DIMENSIONAL_ANCHOR_ITEM.get()),

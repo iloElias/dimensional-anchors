@@ -65,12 +65,11 @@ public final class RegisteredKeyItem extends Item {
                             .filter(session -> session.anchorId().equals(keyData.anchorId())).isPresent()) {
                 if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
                         && PlayerTravelService.exitWithKey(serverPlayer, keyData.anchorId())) {
-                    player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
+                    applyCooldown(player, stack);
                 }
                 return stack;
             }
 
-            player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
             boolean available = false;
             String message = "message.dimensionalanchors.key_anchor_unavailable";
             if (level instanceof ServerLevel serverLevel) {
@@ -79,7 +78,14 @@ public final class RegisteredKeyItem extends Item {
                 if (anchor.isPresent()) {
                     var record = anchor.orElseThrow();
                     try {
-                        RoomGeneration.prepare(serverLevel, record.anchorId(), record.tier());
+                        var geometry = RoomGeneration.prepare(serverLevel, record.anchorId(), record.tier());
+                        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                            // The travel service reports its own outcome and plays the arrival sound.
+                            if (PlayerTravelService.enterWithKey(serverPlayer, record.anchorId(), geometry)) {
+                                applyCooldown(player, stack);
+                            }
+                            return stack;
+                        }
                         available = true;
                         message = "message.dimensionalanchors.key_charge_complete";
                     } catch (IllegalStateException exception) {
@@ -95,5 +101,10 @@ public final class RegisteredKeyItem extends Item {
             player.sendOverlayMessage(Component.translatable(message));
         }
         return stack;
+    }
+
+    // Applied after travel: changing dimension recreates the client player and drops earlier cooldowns.
+    private static void applyCooldown(Player player, ItemStack stack) {
+        player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
     }
 }

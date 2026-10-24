@@ -80,6 +80,22 @@ final class RoomGeneration {
         return geometry;
     }
 
+    static void tryExpandExisting(ServerLevel source, UUID anchorId, AnchorTier tier, String trigger) {
+        var allocation = RoomAllocationSavedData.get(source);
+        var existing = allocation.room(anchorId).orElse(null);
+        if (existing == null || existing.tier().ordinal() > tier.ordinal()
+                || existing.complete() && existing.tier() == tier) {
+            return;
+        }
+        try {
+            prepare(source, anchorId, tier);
+        } catch (IllegalStateException exception) {
+            DimensionalAnchors.LOGGER.warn(
+                    "Cannot expand room for anchor {} during {}; expansion will be retried on a later trigger",
+                    anchorId, trigger, exception);
+        }
+    }
+
     private static void verifyBoundary(ServerLevel level, RoomGeometry geometry) {
         var shell = geometry.shell();
         for (BlockPos position : BlockPos.betweenClosed(shell.minX(), shell.minY(), shell.minZ(),

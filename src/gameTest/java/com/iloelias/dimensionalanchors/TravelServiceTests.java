@@ -327,6 +327,75 @@ final class TravelServiceTests {
                 "Rejected teleport did not report an explicit failure");
     }
 
+    static void entries(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var server = level.getServer();
+        var pocket = server.getLevel(RoomGeneration.POCKET);
+        var player = helper.makeMockServerPlayerInLevel();
+        var exterior = safeExterior(helper, new BlockPos(2, 3, 2));
+        helper.assertTrue(player.teleportTo(level, exterior.position().x(), exterior.position().y(),
+                exterior.position().z(), Set.<Relative>of(), 40, 5, false), "Could not place exterior fixture");
+        var start = player.position();
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        var firstRoom = RoomGeneration.prepare(pocket, first, AnchorTier.COPPER);
+        var secondRoom = RoomGeneration.prepare(pocket, second, AnchorTier.COPPER);
+        var sessions = PlayerRoomSavedData.get(level);
+        try {
+            helper.assertTrue(PlayerTravelService.enterWithKey(player, first, firstRoom)
+                    && player.level() == pocket && firstRoom.interior().isInside(player.blockPosition())
+                    && player.getYRot() == 180.0F, "Key entry did not land facing north inside the room");
+            var session = sessions.find(player.getUUID()).orElseThrow();
+            helper.assertTrue(session.anchorId().equals(first) && session.exteriorReturn().position().equals(start)
+                    && session.exteriorReturn().dimension().equals(Level.OVERWORLD)
+                    && sessions.transition(player.getUUID()).isEmpty(),
+                    "Key entry did not record the exact exterior return or left a journal entry");
+            helper.assertTrue(!PlayerTravelService.enterWithKey(player, first, firstRoom)
+                    && sessions.find(player.getUUID()).orElseThrow() == session,
+                    "Entering the occupied room again changed the session");
+
+            helper.assertTrue(PlayerTravelService.enterWithKey(player, second, secondRoom)
+                    && secondRoom.interior().isInside(player.blockPosition()), "Room change did not move the player");
+            NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player));
+            var changed = sessions.find(player.getUUID()).orElseThrow();
+            helper.assertTrue(player.isAlive() && changed.anchorId().equals(second)
+                    && changed.exteriorReturn().equals(session.exteriorReturn()),
+                    "Room change lost the original exterior return or triggered boundary punishment");
+
+            helper.assertTrue(PlayerTravelService.exitWithKey(player, second) && player.level() == level
+                    && player.position().equals(start) && sessions.find(player.getUUID()).isEmpty(),
+                    "Exit after room change did not return to the original exterior");
+
+            BlockPos anchorPos = helper.absolutePos(new BlockPos(6, 3, 2));
+            level.setBlockAndUpdate(anchorPos.below(), Blocks.STONE.defaultBlockState());
+            level.setBlockAndUpdate(anchorPos.east().below(), Blocks.STONE.defaultBlockState());
+            helper.assertTrue(PlayerTravelService.enterFromAnchor(player, first, firstRoom, anchorPos, Direction.EAST),
+                    "Anchor interaction entry failed");
+            var anchorReturn = sessions.find(player.getUUID()).orElseThrow().exteriorReturn();
+            helper.assertTrue(anchorReturn.position().equals(Vec3.atBottomCenterOf(anchorPos.east()))
+                    && anchorReturn.yaw() == Direction.WEST.toYRot(),
+                    "Anchor entry did not record a safe return in front of the used side");
+            helper.assertTrue(PlayerTravelService.exitFromControl(player, firstRoom.exitControl())
+                    && player.position().equals(anchorReturn.position()), "Anchor entry exit returned elsewhere");
+
+            var key = DimensionalAnchors.DIMENSIONAL_KEY.get().getDefaultInstance();
+            key.set(DimensionalAnchors.REGISTERED_KEY_DATA.get(), new RegisteredKeyData(first));
+            helper.assertTrue(!player.getCooldowns().isOnCooldown(key),
+                    "Anchor interaction entry or control exit applied the remote-travel cooldown");
+            level.setBlockAndUpdate(anchorPos, DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR.get().defaultBlockState());
+            AnchorSavedData.get(level).put(AnchorRecord.unplaced(first, AnchorTier.COPPER, true)
+                    .placedAt(net.minecraft.core.GlobalPos.of(level.dimension(), anchorPos)));
+            key.getItem().finishUsingItem(key, level, player);
+            helper.assertTrue(player.level() == pocket && player.getCooldowns().isOnCooldown(key),
+                    "Remote key entry did not teleport or did not apply cooldown after arrival");
+            key.getItem().finishUsingItem(key, pocket, player);
+            helper.assertTrue(player.level() == level, "Remote key exit failed");
+            level.setBlockAndUpdate(anchorPos, Blocks.AIR.defaultBlockState());
+        } finally {
+            sessions.find(player.getUUID()).ifPresent(current -> sessions.completeExit(player.getUUID(), current.anchorId()));
+        }
+    }
+
     private static ExteriorReturn safeExterior(GameTestHelper helper, BlockPos localFeet) {
         var level = helper.getLevel();
         BlockPos feet = helper.absolutePos(localFeet);

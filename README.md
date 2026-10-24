@@ -73,7 +73,8 @@ The command gives one anchor of the recorded tier with the same UUID and
 registration. It requires a free inventory slot and refuses unknown,
 inconsistent or still-placed identities. Place the recovered block to restore
 anchor availability; the command never moves occupants or recovers lost keys.
-Gameplay entry remains disabled pending transition/recovery integration.
+Room entry is enabled by charging a registered key or using it on its anchor;
+it is pending in-game validation.
 See [anchor recovery](docs/design/ANCHORS.md#administrative-anchor-recovery)
 and [validation](docs/TO_TEST.md) for scope and limitations.
 

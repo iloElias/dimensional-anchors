@@ -25,23 +25,27 @@ public final class PlayerRoomSavedData extends SavedData {
     private static final Codec<PlayerRoomSavedData> RAW_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.intRange(DATA_VERSION, DATA_VERSION).fieldOf("data_version").forGetter(data -> DATA_VERSION),
             Codec.unboundedMap(UUIDUtil.STRING_CODEC, PlayerRoomSession.CODEC)
-                    .fieldOf("sessions").forGetter(data -> data.sessions)
-    ).apply(instance, (version, sessions) -> new PlayerRoomSavedData(sessions)));
+                    .fieldOf("sessions").forGetter(data -> data.sessions),
+            Codec.unboundedMap(UUIDUtil.STRING_CODEC, PlayerTransition.CODEC)
+                    .optionalFieldOf("transitions", Map.of()).forGetter(data -> data.transitions)
+    ).apply(instance, (version, sessions, transitions) -> new PlayerRoomSavedData(sessions, transitions)));
     public static final Codec<PlayerRoomSavedData> CODEC = SavedDataSupport.strictCodec(RAW_CODEC);
     public static final SavedDataType<PlayerRoomSavedData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(DimensionalAnchors.MODID, "player_rooms"),
             PlayerRoomSavedData::new, CODEC);
 
     private final Map<UUID, PlayerRoomSession> sessions;
+    private final Map<UUID, PlayerTransition> transitions;
     private final Set<UUID> activeTravel = new HashSet<>();
     private final RoomMovementEnforcement movement = new RoomMovementEnforcement();
 
     private PlayerRoomSavedData() {
-        this(Map.of());
+        this(Map.of(), Map.of());
     }
 
-    private PlayerRoomSavedData(Map<UUID, PlayerRoomSession> sessions) {
+    private PlayerRoomSavedData(Map<UUID, PlayerRoomSession> sessions, Map<UUID, PlayerTransition> transitions) {
         this.sessions = new HashMap<>(sessions);
+        this.transitions = new HashMap<>(transitions);
     }
 
     public static PlayerRoomSavedData get(ServerLevel level) {
@@ -81,6 +85,7 @@ public final class PlayerRoomSavedData extends SavedData {
             throw new IllegalStateException("Player changed rooms before exit completion: " + playerId);
         }
         sessions.remove(playerId);
+        transitions.remove(playerId);
         movement.forget(playerId);
         setDirty();
     }
@@ -91,8 +96,56 @@ public final class PlayerRoomSavedData extends SavedData {
             throw new IllegalStateException("Player session changed during travel: " + playerId);
         }
         sessions.remove(playerId);
+        transitions.remove(playerId);
         movement.forget(playerId);
         setDirty();
+    }
+
+    Optional<PlayerTransition> transition(UUID playerId) {
+        return Optional.ofNullable(transitions.get(Objects.requireNonNull(playerId, "playerId")));
+    }
+
+    void recordTransition(UUID playerId, PlayerTransition transition) {
+        Objects.requireNonNull(transition, "transition");
+        var session = find(playerId).orElse(null);
+        if (transition.type() == PlayerTransition.Type.ENTRY ? session != null
+                : session == null || !transition.sourceRoom().orElseThrow().equals(session.anchorId())) {
+            throw new IllegalStateException("Transition source does not match the player's room: " + playerId);
+        }
+        var previous = transitions.get(playerId);
+        if (previous != null && !previous.operationId().equals(transition.operationId())) {
+            throw new IllegalStateException("Player has an unresolved transition: " + playerId);
+        }
+        transitions.put(playerId, transition);
+        setDirty();
+    }
+
+    /** Applies a confirmed entry or room change and clears its journal entry in one step. */
+    PlayerRoomSession completeTransition(UUID playerId, PlayerTransition transition) {
+        if (!transition.equals(transitions.get(Objects.requireNonNull(playerId, "playerId")))) {
+            throw new IllegalStateException("Transition is no longer current: " + playerId);
+        }
+        var target = transition.targetRoom().orElseThrow(() -> new IllegalStateException("Exit uses completeExit"));
+        var current = find(playerId).orElse(null);
+        boolean matches = transition.type() == PlayerTransition.Type.ENTRY ? current == null
+                : current != null && current.anchorId().equals(transition.sourceRoom().orElseThrow());
+        if (!matches) {
+            throw new IllegalStateException("Player session changed during travel: " + playerId);
+        }
+        var next = new PlayerRoomSession(target, transition.exteriorReturn());
+        sessions.put(playerId, next);
+        transitions.remove(playerId);
+        movement.forget(playerId);
+        setDirty();
+        return next;
+    }
+
+    void cancelTransition(UUID playerId, UUID operationId) {
+        var current = transitions.get(Objects.requireNonNull(playerId, "playerId"));
+        if (current != null && current.operationId().equals(operationId)) {
+            transitions.remove(playerId);
+            setDirty();
+        }
     }
 
     boolean beginTravel(UUID playerId) {

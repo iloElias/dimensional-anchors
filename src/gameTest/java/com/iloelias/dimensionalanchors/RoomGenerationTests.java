@@ -137,6 +137,15 @@ final class RoomGenerationTests {
         helper.assertTrue(multiEvent.isCanceled(),
                 "Multi-block placement crossing the room boundary was allowed");
 
+        var anchor = new net.minecraft.world.item.ItemStack(DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR_ITEM.get());
+        var anchorContext = new net.minecraft.world.item.context.BlockPlaceContext(pocket, player,
+                net.minecraft.world.InteractionHand.MAIN_HAND, anchor,
+                new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atBottomCenterOf(inside),
+                        net.minecraft.core.Direction.UP, inside.below(), false)) {};
+        helper.assertTrue(!((net.minecraft.world.item.BlockItem) anchor.getItem()).place(anchorContext)
+                        .consumesAction() && !(pocket.getBlockState(inside).getBlock() instanceof AnchorBlock),
+                "An anchor was placed inside a pocket room");
+
         var goldBoundary = inside.above(7);
         helper.assertTrue(!RoomGeneration.prepare(pocket, id, AnchorTier.GOLD).equals(geometry)
                 && pocket.getBlockState(goldBoundary).is(DimensionalAnchors.DIMENSIONAL_LIMITER_BLOCK.get()),

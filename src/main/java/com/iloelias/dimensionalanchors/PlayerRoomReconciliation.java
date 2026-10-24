@@ -33,19 +33,51 @@ final class PlayerRoomReconciliation {
         try {
             sessions.movement().forget(player.getUUID());
             var session = sessions.find(player.getUUID()).orElse(null);
+            var transition = sessions.transition(player.getUUID()).orElse(null);
             boolean pocket = level.dimension().equals(RoomGeneration.POCKET);
-            if (session == null && !pocket) {
+            if (session == null && transition == null && !pocket) {
                 return;
             }
             if (!player.isAlive() || player.isRemoved() || !player.position().isFinite()) {
                 report(player, "Cannot reconcile an inactive player or invalid position");
                 return;
             }
+            if (transition != null && transition.targetRoom().isPresent()) {
+                if (pocket && SafeTravelDestination.recoveredArrival(player, transition)) {
+                    var target = new PlayerRoomSession(transition.targetRoom().orElseThrow(), transition.exteriorReturn());
+                    try {
+                        var geometry = PlayerTravelService.currentRoom(level, player.blockPosition(), target);
+                        var entered = sessions.completeTransition(player.getUUID(), transition);
+                        DimensionalAnchors.LOGGER.info("Completed interrupted {} {} for player {} at its expected arrival",
+                                transition.type(), transition.operationId(), player.getUUID());
+                        sessions.movement().resume(player, entered, geometry);
+                        player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.entry_complete"));
+                        return;
+                    } catch (IllegalStateException exception) {
+                        DimensionalAnchors.LOGGER.warn("Cannot complete interrupted {} {} for player {}",
+                                transition.type(), transition.operationId(), player.getUUID(), exception);
+                    }
+                } else if (transition.type() == PlayerTransition.Type.ENTRY && session == null && !pocket) {
+                    DimensionalAnchors.LOGGER.info("Cancelling interrupted {} {} for player {}: never entered the pocket",
+                            transition.type(), transition.operationId(), player.getUUID());
+                    sessions.cancelTransition(player.getUUID(), transition.operationId());
+                    return;
+                }
+            }
             if (session == null) {
                 report(player, "Player is in the pocket dimension without a recorded session");
                 return;
             }
             if (!pocket) {
+                if (transition != null && transition.type() == PlayerTransition.Type.EXIT
+                        && transition.sourceRoom().equals(java.util.Optional.of(session.anchorId()))
+                        && SafeTravelDestination.recoveredArrival(player, transition)) {
+                    DimensionalAnchors.LOGGER.info("Completed interrupted {} {} for player {} at its expected arrival",
+                            transition.type(), transition.operationId(), player.getUUID());
+                    sessions.completeExitIfUnchanged(player.getUUID(), session);
+                    player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.exit_complete"));
+                    return;
+                }
                 if (respawn) {
                     sessions.completeExitIfUnchanged(player.getUUID(), session);
                     player.sendOverlayMessage(Component.translatable("message.dimensionalanchors.session_respawn_complete"));
@@ -57,6 +89,11 @@ final class PlayerRoomReconciliation {
             }
             try {
                 var geometry = PlayerTravelService.currentRoom(level, player.blockPosition(), session);
+                if (transition != null) {
+                    DimensionalAnchors.LOGGER.info("Cancelling interrupted {} {} for player {}: source room unchanged",
+                            transition.type(), transition.operationId(), player.getUUID());
+                    sessions.cancelTransition(player.getUUID(), transition.operationId());
+                }
                 sessions.movement().resume(player, session, geometry);
             } catch (IllegalStateException exception) {
                 DimensionalAnchors.LOGGER.warn("Cannot reconcile room {} for player {}",

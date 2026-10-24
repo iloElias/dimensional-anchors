@@ -22,6 +22,13 @@ public final class AnchorBlockItem extends BlockItem {
             DimensionalAnchors.LOGGER.warn("Rejected anchor placement with invalid tier at {}", context.getClickedPos());
             return InteractionResult.FAIL;
         }
+        if (context.getLevel().dimension().equals(RoomGeneration.POCKET)) {
+            if (!context.getLevel().isClientSide() && context.getPlayer() != null) {
+                context.getPlayer().sendOverlayMessage(Component.translatable(
+                        "message.dimensionalanchors.anchor_in_pocket"));
+            }
+            return InteractionResult.FAIL;
+        }
         AnchorItemData data = stack.get(DimensionalAnchors.ANCHOR_ITEM_DATA.get());
         if (data != null && context.getLevel() instanceof ServerLevel serverLevel) {
             try {
@@ -58,6 +65,9 @@ public final class AnchorBlockItem extends BlockItem {
             }
             if (data.tier().ordinal() > existing.tier().ordinal()) {
                 AnchorIdentity.store(serverLevel, existing.withTier(data.tier()));
+            }
+            if (existing.registered()) {
+                RoomGeneration.tryExpandExisting(serverLevel, data.anchorId(), data.tier(), "crafting");
             }
         } catch (IllegalStateException exception) {
             DimensionalAnchors.LOGGER.error("Cannot record crafted anchor tier {}", data.anchorId(), exception);

@@ -129,6 +129,14 @@ final class SafeTravelDestination {
         }
     }
 
+    static boolean recoveredArrival(ServerPlayer player, PlayerTransition transition) {
+        Vec3 actual = player.position();
+        return player.level().dimension().equals(transition.destinationDimension())
+                && player.isAlive() && !player.isRemoved() && actual.isFinite()
+                && actual.distanceToSqr(transition.destinationPosition()) <= 1.0
+                && safe(player.level(), player, actual, Optional.empty());
+    }
+
     private static boolean safe(ServerLevel level, Player player, Vec3 position, Optional<BoundingBox> interior) {
         AABB body = player.getLocalBoundsForPose(Pose.STANDING).move(position);
         if (body.minY < level.getMinY() + 1 || body.maxY > level.getMaxY() + 1

@@ -97,6 +97,8 @@ public final class AnchorRegressionTests {
                 100, 0, true), PlayerRoomReconciliationTests::exteriorRespawn);
         register(event, "reconcile_vanilla_respawn", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), PlayerRoomReconciliationTests::vanillaRespawn);
+        register(event, "reconcile_interrupted_transitions", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), PlayerRoomReconciliationTests::interruptedTransitions);
         register(event, "safe_room_entry", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), SafeTravelTests::entry);
         register(event, "safe_nearby_destination", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
@@ -109,6 +111,8 @@ public final class AnchorRegressionTests {
                 100, 0, true), TravelServiceTests::rejectedTeleportKeepsSession);
         register(event, "canceled_reentrant_exit", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), TravelServiceTests::cancellationAndReentry);
+        register(event, "room_entry", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), TravelServiceTests::entries);
         register(event, "exceptional_exit_teleports", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), TravelServiceTests::exceptionalExits);
         register(event, "replaced_exit_sessions", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
@@ -133,6 +137,8 @@ public final class AnchorRegressionTests {
                 100, 0, true), helper -> stackPlacement(helper, GameType.CREATIVE));
         register(event, "upgraded_extraction", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRegressionTests::upgradedExtraction);
+        register(event, "upgrade_expansion_fallback", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                100, 0, true), AnchorRegressionTests::upgradeExpansionFallback);
         register(event, "key_registration", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
                 100, 0, true), AnchorRegressionTests::keyRegistration);
         register(event, "key_registration_lifecycle", new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
@@ -672,6 +678,42 @@ public final class AnchorRegressionTests {
             var restored = AnchorSavedData.TYPE.codec().parse(ops, encoded).getOrThrow();
             helper.assertTrue(restored.get(id).equals(saved.get(id)), "SavedData round trip lost anchor data");
         }
+    }
+
+    private static void upgradeExpansionFallback(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var pocket = level.getServer().getLevel(RoomGeneration.POCKET);
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        UUID id = UUID.randomUUID();
+        AnchorSavedData.get(level).put(AnchorRecord.unplaced(id, AnchorTier.COPPER, true));
+        var originalGeometry = RoomGeneration.prepare(level, id, AnchorTier.COPPER);
+        var source = new ItemStack(DimensionalAnchors.COPPER_DIMENSIONAL_ANCHOR_ITEM.get());
+        source.set(DimensionalAnchors.ANCHOR_ITEM_DATA.get(),
+                new AnchorItemData(id, AnchorTier.COPPER, true));
+        ItemStack upgraded = upgrade(helper, recipe(helper, AnchorTier.IRON), source, AnchorTier.IRON);
+        var expandedGeometry = new RoomGeometry(originalGeometry.slot(), AnchorTier.IRON);
+        BlockPos obstruction = new BlockPos(expandedGeometry.shell().maxX(),
+                expandedGeometry.reference().getY(), expandedGeometry.reference().getZ());
+        pocket.setBlockAndUpdate(obstruction, Blocks.STONE.defaultBlockState());
+
+        upgraded.getItem().onCraftedPostProcess(upgraded, level);
+        helper.assertTrue(AnchorIdentity.find(level, id).orElseThrow().tier() == AnchorTier.IRON
+                && RoomAllocationSavedData.get(level).room(id).orElseThrow().tier() == AnchorTier.COPPER
+                && pocket.getBlockState(obstruction).is(Blocks.STONE),
+                "Crafting failure changed the old room or overwrote an obstruction");
+
+        pocket.setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState());
+        BlockPos placePos = helper.absolutePos(new BlockPos(3, 3, 3));
+        level.setBlockAndUpdate(placePos.below(), Blocks.STONE.defaultBlockState());
+        level.setBlockAndUpdate(placePos, Blocks.AIR.defaultBlockState());
+        var context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, upgraded,
+                new BlockHitResult(Vec3.atBottomCenterOf(placePos), Direction.UP, placePos.below(), false));
+        helper.assertTrue(((BlockItem) upgraded.getItem()).place(context).consumesAction(),
+                "Placement fallback rejected the upgraded anchor");
+        helper.assertTrue(RoomAllocationSavedData.get(level).room(id).orElseThrow().tier() == AnchorTier.IRON
+                && pocket.getBlockState(expandedGeometry.exitControl())
+                        .is(DimensionalAnchors.DIMENSIONAL_EXIT_BLOCK.get()),
+                "Placement did not retry and complete the previously blocked room expansion");
     }
 
     private static Recipe<?> recipe(GameTestHelper helper, AnchorTier tier) {

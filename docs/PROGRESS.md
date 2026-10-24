@@ -3,7 +3,7 @@
 **Date:** 2026-10-22  
 **Last updated:** 2026-10-23 (UTC-03:00)\
 **Configured version:** `0.1.0-alpha.1` (release tag: `v0.1.0-alpha.1`)  
-**Stage:** In-game feedback recorded; dark UUID tooltips, registered-key recovery, and pocket placement limits implemented, pending permitted validation. Entry remains disabled; player-transition recovery and both approved entry routes are the next implementation stages.
+**Stage:** Room entry (key charge and anchor interaction) implemented, pending validation. Owner confirmed UUID presentation, key-based recovery, and pocket placement rules. Room upgrades now attempt expansion at crafting pickup, then placement, retaining key access as fallback; automated validation remains pending.
 
 This report distinguishes changes present in the working tree from verified gameplay.
 It does not replace the [approved design](DESIGN_DECISIONS.md) or imply that the
@@ -11,6 +11,28 @@ planned room mechanics are implemented.
 
 ## Continuation handoff, 2026-10-23
 
+- Owner confirmed ordered upgrade expansion (TT-079) after restarting with the
+  updated JAR. The reported exit crash was a `NoClassDefFoundError` caused by
+  replacing the mod JAR while the game was running; no code change was needed.
+- Started the transition journal (TT-070): exit operations are persisted
+  before teleporting and reconciled at login (complete proven arrival, cancel
+  unchanged source, otherwise retain and report). See
+  [TRAVEL](design/TRAVEL.md#implemented-exit-transition-journal-2026-10-23).
+  GameTest authored, not run.
+- Room entry implemented: a completed key charge or right-clicking the
+  matching anchor with its registered key prepares the room and teleports the
+  player inside, facing north. Key entry records the exact exterior position;
+  anchor entry records a safe point in front of the clicked side, facing the
+  anchor. Using another room's key inside a room changes rooms and keeps the
+  original exterior return. Entries are journaled (`entry`/`room_change`) and
+  reconciled at login. The 20 s key cooldown applies only after a successful
+  remote key teleport, and is applied after arrival because a dimension change
+  recreates the client player and dropped the earlier cooldown display. `room_entry` GameTest
+  authored, not run (TT-082).
+- Anchors can no longer be placed in the pocket dimension (prevents anchors
+  inside rooms); a short overlay message is shown. Player-facing messages were
+  rewritten as medium-length, complete sentences (keys unchanged). Tests authored, not run
+  (TT-080/081).
 - Owner's latest in-game feedback: the UUID line should be darker (now
   `DARK_GRAY`); `/dimensionalanchors recover` should identify the anchor from
   a registered key (the key remains held; the authoritative anchor goes to a
@@ -21,16 +43,15 @@ planned room mechanics are implemented.
   checking all affected positions for multi-block placements. New test coverage
   includes shell/outside/future expansion positions and verifies a subsequent
   tier expansion. Tests and client validation remain pending.
-- The supplied key-charge error at pocket position `(80, 71, 16)` is the
+- The supplied key-charge error at pocket position `(80, 71, 16)` was the
   fail-closed preflight in `RoomGeneration.prepare`: the requested expansion
   needs that position for its new boundary, but a preexisting unexpected block
   occupies it. Generation correctly avoided overwriting it. This explains why
   the upgrade was not reflected in the room: the tier is recorded, but key
   preparation/expansion failed. The newly enforced placement rule prevents
   recurrence; it does not remove old builds. Inspect and remove/move the
-  obstructing block manually, then charge the registered key again. Item upgrade
-  output records its new tier on pickup; placing it updates the placed record;
-  room geometry changes on subsequent key access, not at crafting time.
+  obstructing block manually before retrying. The new tier is persisted at
+  crafting pickup; geometry expansion now follows the ordered triggers above.
 - Owner's latest in-game report: tooltips appeared but took too much space.
   They now contain only dark-gray `UUID: <uuid>` for identity-bearing anchors
   and registered keys, always visible without Shift; tooltip GameTests were
@@ -38,6 +59,15 @@ planned room mechanics are implemented.
   reads the target UUID from a registered key in the main hand, leaves that key
   untouched, and adds the authoritative anchor to a free slot. The existing
   UUID form remains. New tests cover this path, pending validation.
+- Owner subsequently confirmed the UUID appearance, registered-key recovery
+  command, and pocket placement/boundary configuration work in-game.
+- For an already generated room, registered-anchor upgrades now try to expand
+  when the crafting/smithing output is collected. If that attempt fails, the
+  same upgraded item retries expansion when placed; if no room exists yet or
+  both attempts fail, the existing registered-key access path remains the
+  fallback. Obstructions remain fail-closed and never get overwritten. GameTests
+  cover craft-time expansion and a blocked-craft/placement retry, but have not
+  been run. TT-079 tracks manual validation.
 - Owner confirmed room/dimension creation and tier sizes, successful command
   execution, one expected room expansion with items preserved, and generated
   borders being unbreakable. Expansion after an upgrade updates the room when
@@ -486,8 +516,8 @@ Reported defects and investigation candidates are tracked in
 4. Bounded safe-entry/return search and fallbacks are implemented and tested.
    A server-authoritative exit service and working keyless control are now
    implemented and passed build/GameTests. Login/respawn reconciliation passed
-   the 36-test checkpoint. Keep entry disabled until movement enforcement and
-   remaining legitimate transition/recovery handling are ready.
+   the 36-test checkpoint. Entry by key charge and anchor interaction is now
+   implemented with the transition journal; validate it in-game (TT-082).
 5. Record additional client sound/cooldown, existing-save, and multiplayer checks when performed; do not infer results from the current confirmations.
 6. Commit, push, and release/tag operations require separate requests; none were
    performed in this checkpoint.
